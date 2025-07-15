@@ -48,6 +48,11 @@ export const ChatArea = ({
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+    const isConnected = connectionStatus === ConnectionStatus.Connected;
+    const firstUnreadIndex =
+        currentRoom && currentRoom.unread_count > 0
+            ? Math.max(0, messages.length - currentRoom.unread_count)
+            : null;
 
     if (!currentRoom) {
         return (
@@ -73,8 +78,6 @@ export const ChatArea = ({
             </Box>
         );
     }
-
-    const isConnected = connectionStatus === ConnectionStatus.Connected;
 
     return (
         <Stack sx={{ height: "100%", width: "100%" }}>
@@ -118,6 +121,8 @@ export const ChatArea = ({
                 onReply={onSetReply}
                 onReplyClick={onReplyClick}
                 highlightedMessageId={highlightedMessageId}
+                firstUnreadIndex={firstUnreadIndex}
+                unreadCount={currentRoom?.unread_count || 0}
             />
             <MessageInput
                 isConnected={isConnected}

@@ -11,6 +11,16 @@ type ContextMenuState = {
     message: types.Message;
 } | null;
 
+interface MessageListProps {
+    messages: types.Message[];
+    currentUser: types.User;
+    onReply: (message: types.Message) => void;
+    onReplyClick: (messageId: number) => void;
+    highlightedMessageId?: number;
+    firstUnreadIndex: number | null;
+    unreadCount: number;
+}
+
 export const MessageList = memo(
     ({
         messages,
@@ -18,38 +28,38 @@ export const MessageList = memo(
         onReply,
         onReplyClick,
         highlightedMessageId,
-    }: {
-        messages: types.Message[];
-        currentUser: types.User;
-        onReply: (message: types.Message) => void;
-        onReplyClick: (messageId: number) => void;
-        highlightedMessageId?: number;
-    }) => {
-        const messagesEndRef = useRef<HTMLDivElement | null>(null);
-        const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+        firstUnreadIndex,
+        unreadCount,
+    }: MessageListProps) => {
+        const messagesEndRef = useRef<HTMLDivElement>(null);
+        const scrollContainerRef = useRef<HTMLDivElement>(null);
         const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
         const [showScrollButton, setShowScrollButton] = useState(false);
+        const firstUnreadRef = useRef<HTMLDivElement>(null);
+        const prevMessagesLength = useRef(0);
 
-        // Initial scroll to bottom when chat opens
         useEffect(() => {
-            if (messages.length > 0) {
-                messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
-            }
-        }, [messages.length > 0 ? messages[0]?.id : null]); // Only trigger when first message changes
-
-        // Auto-scroll to bottom when new messages arrive
-        useEffect(() => {
-            if (scrollContainerRef.current) {
-                const container = scrollContainerRef.current;
-                const isNearBottom =
-                    container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-
-                // Only auto-scroll if user is near the bottom
-                if (isNearBottom) {
-                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            if (prevMessagesLength.current === 0 && messages.length > 0) {
+                if (firstUnreadIndex !== null && firstUnreadRef.current) {
+                    // Scroll to the first unread message in the chat
+                    firstUnreadRef.current.scrollIntoView({ behavior: "smooth" });
+                } else if (messagesEndRef.current) {
+                    // Initial scroll to bottom when selecting a chat
+                    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+                }
+            } else if (messages.length > prevMessagesLength.current) {
+                // Auto-scroll to bottom when new messages arrive
+                if (scrollContainerRef.current) {
+                    const container = scrollContainerRef.current;
+                    const isNearBottom =
+                        container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+                    if (isNearBottom) {
+                        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                    }
                 }
             }
-        }, [messages]);
+            prevMessagesLength.current = messages.length;
+        }, [messages, firstUnreadIndex]);
 
         // Handle scroll events to show/hide the scroll button
         const handleScroll = () => {
@@ -108,6 +118,7 @@ export const MessageList = memo(
                 sx={{ flex: 1, overflowY: "auto", p: 2, bgcolor: "grey.100" }}
             >
                 {messages.map((message, index) => {
+                    const isFirstUnread = firstUnreadIndex !== null && index === firstUnreadIndex;
                     const previousMessage = index > 0 ? messages[index - 1] : null;
                     const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
 
@@ -139,6 +150,14 @@ export const MessageList = memo(
                             {showDate && (
                                 <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
                                     <Chip label={formatDate(message.timestamp)} />
+                                </Box>
+                            )}
+                            {isFirstUnread && (
+                                <Box
+                                    ref={isFirstUnread ? firstUnreadRef : null}
+                                    sx={{ display: "flex", justifyContent: "center", my: 2 }}
+                                >
+                                    <Chip label={`Unread messages: ${unreadCount}`} />
                                 </Box>
                             )}
                             <Message
