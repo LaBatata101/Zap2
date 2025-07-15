@@ -196,7 +196,7 @@ export const ChatApp = () => {
                     const roomsData = await apiService.current.getRooms();
                     dispatch({
                         type: ChatActionType.SetRooms,
-                        payload: roomsData.results || roomsData,
+                        payload: roomsData,
                     });
                 } catch (reason) {
                     console.error("Failed to load chat conversations: ", reason);
@@ -247,7 +247,7 @@ export const ChatApp = () => {
                     const messagesData = await apiService.current.getMessages(currentRoom.id);
                     dispatch({
                         type: ChatActionType.SetMessages,
-                        payload: messagesData.results || messagesData,
+                        payload: messagesData,
                     });
 
                     dispatch({
@@ -358,7 +358,13 @@ export const ChatApp = () => {
     }, []);
 
     if (!user) {
-        return <AuthPage onLogin={handleLogin} onRegistration={handleRegistration} />;
+        return (
+            <AuthPage
+                apiService={apiService}
+                onLogin={handleLogin}
+                onRegistration={handleRegistration}
+            />
+        );
     }
 
     return (

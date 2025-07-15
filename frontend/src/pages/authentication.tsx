@@ -1,5 +1,5 @@
 import * as yup from "yup";
-import { useState } from "react";
+import React, { useState } from "react";
 import { LoginCredentials, RegistrationCredentials } from "../api/types";
 import {
     Card,
@@ -30,6 +30,7 @@ import {
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import { useFormik } from "formik";
+import { APIService } from "../api";
 
 const AuthContainer = styled("div")(({ theme }) => ({
     minHeight: "100vh",
@@ -101,14 +102,21 @@ const loginScheme = yup.object().shape({
     password: yup.string().required("Password is required"),
 });
 
+enum AuthMode {
+    login,
+    register,
+}
+
 export const AuthPage = ({
+    apiService,
     onLogin,
     onRegistration,
 }: {
+    apiService: React.RefObject<APIService>;
     onLogin: (cred: LoginCredentials) => Promise<boolean>;
     onRegistration: (cred: RegistrationCredentials) => Promise<boolean>;
 }) => {
-    const [authMode, setAuthMode] = useState("login");
+    const [authMode, setAuthMode] = useState(AuthMode.login);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [snackbar, setSnackbar] = useState({
@@ -116,6 +124,23 @@ export const AuthPage = ({
         message: "",
         severity: "success" as "success" | "error",
     });
+    const [usernameExists, setUsernameExists] = useState(false);
+    const [usernameTimer, setUsernameTimer] = useState<number | null>(null);
+
+    const checkUsernameExists = async (username: string) => {
+        if (usernameTimer) {
+            clearTimeout(usernameTimer); // Cancel any pending check
+        }
+        const timer = setTimeout(async () => {
+            try {
+                const exists = await apiService.current.checkIfUserExists(username);
+                setUsernameExists(exists);
+            } catch (error) {
+                console.error("Error checking username:", error);
+            }
+        }, 500); // 500ms delay
+        setUsernameTimer(timer);
+    };
 
     const registrationForm = useFormik({
         initialValues: {
@@ -125,6 +150,14 @@ export const AuthPage = ({
         },
         validationSchema: registrationScheme,
         onSubmit: async (values) => {
+            if (usernameExists) {
+                setSnackbar({
+                    open: true,
+                    message: "Username already exists. Please choose another one.",
+                    severity: "error",
+                });
+                return;
+            }
             setLoading(true);
             try {
                 const success = await onRegistration(values);
@@ -188,7 +221,7 @@ export const AuthPage = ({
         },
     });
 
-    const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: string | null) => {
+    const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: AuthMode | null) => {
         if (newMode !== null) {
             setAuthMode(newMode);
             registrationForm.resetForm();
@@ -237,7 +270,7 @@ export const AuthPage = ({
                             sx={{ gap: 1 }}
                         >
                             <ToggleButton
-                                value="login"
+                                value={AuthMode.login}
                                 sx={{
                                     border: 0,
                                     borderRadius: "8px !important",
@@ -253,7 +286,7 @@ export const AuthPage = ({
                                 Sign In
                             </ToggleButton>
                             <ToggleButton
-                                value="register"
+                                value={AuthMode.register}
                                 sx={{
                                     border: 0,
                                     borderRadius: "8px !important",
@@ -273,7 +306,7 @@ export const AuthPage = ({
 
                     <form
                         onSubmit={
-                            authMode === "login"
+                            authMode === AuthMode.login
                                 ? loginForm.handleSubmit
                                 : registrationForm.handleSubmit
                         }
@@ -285,17 +318,20 @@ export const AuthPage = ({
                                 name="username"
                                 label="Username"
                                 value={
-                                    authMode === "login"
+                                    authMode === AuthMode.login
                                         ? loginForm.values.username
                                         : registrationForm.values.username
                                 }
                                 onChange={
-                                    authMode === "login"
+                                    authMode === AuthMode.login
                                         ? loginForm.handleChange
-                                        : registrationForm.handleChange
+                                        : (e) => {
+                                              registrationForm.handleChange(e);
+                                              checkUsernameExists(e.target.value);
+                                          }
                                 }
                                 onBlur={
-                                    authMode === "login"
+                                    authMode === AuthMode.login
                                         ? loginForm.handleBlur
                                         : registrationForm.handleBlur
                                 }
@@ -303,12 +339,16 @@ export const AuthPage = ({
                                     (loginForm.touched.username &&
                                         Boolean(loginForm.errors.username)) ||
                                     (registrationForm.touched.username &&
-                                        Boolean(registrationForm.errors.username))
+                                        Boolean(registrationForm.errors.username)) ||
+                                    (authMode === AuthMode.register && usernameExists)
                                 }
                                 helperText={
                                     (loginForm.touched.username && loginForm.errors.username) ||
                                     (registrationForm.touched.username &&
-                                        registrationForm.errors.username)
+                                        registrationForm.errors.username) ||
+                                    (authMode === AuthMode.register && usernameExists
+                                        ? "The username already exists"
+                                        : "")
                                 }
                                 fullWidth
                                 slotProps={{
@@ -323,7 +363,7 @@ export const AuthPage = ({
                             />
 
                             {/* E-mail field (only in register mode) */}
-                            {authMode === "register" && (
+                            {authMode === AuthMode.register && (
                                 <TextField
                                     fullWidth
                                     id="email"
@@ -358,17 +398,17 @@ export const AuthPage = ({
                                 label="Password"
                                 type={showPassword ? "text" : "password"}
                                 value={
-                                    authMode === "login"
+                                    authMode === AuthMode.login
                                         ? loginForm.values.password
                                         : registrationForm.values.password
                                 }
                                 onChange={
-                                    authMode === "login"
+                                    authMode === AuthMode.login
                                         ? loginForm.handleChange
                                         : registrationForm.handleChange
                                 }
                                 onBlur={
-                                    authMode === "login"
+                                    authMode === AuthMode.login
                                         ? loginForm.handleBlur
                                         : registrationForm.handleBlur
                                 }
@@ -408,7 +448,7 @@ export const AuthPage = ({
                                     },
                                 }}
                             />
-                            {authMode === "login" && (
+                            {authMode === AuthMode.login && (
                                 <Stack
                                     direction="row"
                                     justifyContent="space-between"
@@ -433,7 +473,7 @@ export const AuthPage = ({
                             >
                                 {loading
                                     ? "Please wait..."
-                                    : authMode === "login"
+                                    : authMode === AuthMode.login
                                       ? "Sign in"
                                       : "Sign up"}
                             </Button>

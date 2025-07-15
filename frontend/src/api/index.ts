@@ -1,4 +1,4 @@
-import { LoginCredentials, RegistrationCredentials } from "./types";
+import { ChatRoom, LoginCredentials, Message, RegistrationCredentials } from "./types";
 
 const API_CONFIG = {
     baseURL: "http://localhost:8000/api",
@@ -27,11 +27,13 @@ export class APIService {
         try {
             const response = await fetch(url, config);
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (response.status === 500) {
+                throw new Error("INTERNAL SERVER ERROR!");
             }
-
-            return await response.json();
+            const contentLength = response.headers.get("Content-Length");
+            return contentLength === "0"
+                ? { status: response.status }
+                : { data: await response.json(), status: response.status };
         } catch (error) {
             console.error("API request failed:", error);
             throw error;
@@ -95,19 +97,22 @@ export class APIService {
     }
 
     // Chat methods
-    async getRooms() {
-        return this.request("/rooms/");
+    async getRooms(): Promise<ChatRoom[]> {
+        const response = await this.request("/rooms/");
+        return response.data;
     }
 
-    async createRoom(name: string) {
-        return this.request("/rooms/", {
+    async createRoom(name: string): Promise<ChatRoom> {
+        const response = await this.request("/rooms/", {
             method: "POST",
             body: JSON.stringify({ name }),
         });
+        return response.data;
     }
 
-    async getMessages(roomId: number) {
-        return this.request(`/messages/?room=${roomId}`);
+    async getMessages(roomId: number): Promise<Message[]> {
+        const response = await this.request(`/messages/?room=${roomId}`);
+        return response.data;
     }
 
     async sendMessage(roomId: number, messagePaylod: { message: string; reply_to_id?: number }) {
@@ -119,6 +124,11 @@ export class APIService {
                 reply_to_id: messagePaylod.reply_to_id,
             }),
         });
+    }
+
+    async checkIfUserExists(username: string): Promise<boolean> {
+        const response = await this.request(`/user/exists/${username}/`);
+        return response.status === 200;
     }
 }
 type ConnectCallback = () => void;

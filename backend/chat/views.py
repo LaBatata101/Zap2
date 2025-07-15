@@ -32,8 +32,10 @@ class CheckUsernameView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, _, username):
-        exists = User.objects.filter(username=username).exists()
-        return Response({"exists": exists}, status=status.HTTP_200_OK)
+        if User.objects.filter(username=username).exists():
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 class UserDetailView(generics.RetrieveAPIView[User]):
