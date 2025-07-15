@@ -91,10 +91,14 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                         </Box>
                     }
                     slotProps={{
+                        primary: {
+                            component: "div",
+                        },
                         secondary: {
                             noWrap: true,
                             textOverflow: "ellipsis",
                             color: "text.secondary",
+                            component: "div",
                         },
                     }}
                 />
