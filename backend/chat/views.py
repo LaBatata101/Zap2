@@ -1,5 +1,7 @@
 from typing import override
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Q
@@ -8,6 +10,7 @@ from django.middleware.csrf import get_token
 from django.utils import timezone
 from rest_framework import generics, permissions, status, views, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -142,6 +145,7 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
 
     @override
     def get_queryset(self):
@@ -153,7 +157,18 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
 
     @override
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        message = serializer.save(user=self.request.user)
+        channel_layer = get_channel_layer()
+        room_id = message.room.id
+        serialized_message = MessageSerializer(message, context={"request": self.request}).data
+
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{room_id}",
+            {
+                "type": "chat.message",
+                "message": serialized_message,
+            },
+        )
 
     @override
     def list(self, request: Request, *args, **kwargs):

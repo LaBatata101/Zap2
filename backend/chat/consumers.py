@@ -35,28 +35,28 @@ class UserChatConsumer(AsyncWebsocketConsumer):
         for room in chat_rooms:
             await self.channel_layer.group_discard(f"chat_{room.id}", self.channel_name)
 
-    @override
-    async def receive(self, text_data=None, bytes_data=None):
-        data = json.loads(text_data)
-        message_content = data["message"]
-        room_id = data["room_id"]
-        reply_to_id = data.get("reply_to_id")
-
-        if not self.user.is_authenticated:
-            return
-
-        new_message = await self.save_message(self.user, room_id, message_content, reply_to_id)
-        if not new_message:
-            return None
-
-        serialized_message = await self.serialize_message(new_message)
-        await self.channel_layer.group_send(
-            f"chat_{room_id}",
-            {
-                "type": "chat.message",  # call the `chat_message` method
-                "message": serialized_message,
-            },
-        )
+    # @override
+    # async def receive(self, text_data=None, bytes_data=None):
+    #     data = json.loads(text_data)
+    #     message_content = data["message"]
+    #     room_id = data["room_id"]
+    #     reply_to_id = data.get("reply_to_id")
+    #
+    #     if not self.user.is_authenticated:
+    #         return
+    #
+    #     new_message = await self.save_message(self.user, room_id, message_content, reply_to_id)
+    #     if not new_message:
+    #         return None
+    #
+    #     serialized_message = await self.serialize_message(new_message)
+    #     await self.channel_layer.group_send(
+    #         f"chat_{room_id}",
+    #         {
+    #             "type": "chat.message",  # call the `chat_message` method
+    #             "message": serialized_message,
+    #         },
+    #     )
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event["message"]))

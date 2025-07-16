@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as types from "../api/types";
+import * as types from "../../api/types";
 import { EmojiClickData } from "emoji-picker-react";
 import { Box, IconButton, TextField, Typography } from "@mui/material";
 import { Close, PowerOff } from "@mui/icons-material";
-import { MessageInputActions } from "./message_input_actions";
+import { MessageInputActions } from "./input_actions";
+import { MediaPreview } from "./media_preview";
+import { FilePreviewModal } from "./file_preview";
 
 export const MessageInput = ({
     isConnected,
@@ -12,13 +14,16 @@ export const MessageInput = ({
     onCancelReply,
 }: {
     isConnected: boolean;
-    onSendMessage: (content: string) => Promise<void>;
+    onSendMessage: (content: string, files: File[]) => Promise<void>;
     replyingTo: types.Message | null;
     onCancelReply: () => void;
 }) => {
     const [newMessage, setNewMessage] = useState("");
+    const [files, setFiles] = useState<File[]>([]);
     const [loading, setLoading] = useState(false);
     const [emojiPickerAnchor, setEmojiPickerAnchor] = useState<HTMLElement | null>(null);
+    const [previewFile, setPreviewFile] = useState<File | null>(null);
+    const [dragOver, setDragOver] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textFieldRef = useRef<HTMLDivElement>(null);
 
@@ -32,11 +37,12 @@ export const MessageInput = ({
     }, [replyingTo]);
 
     const handleSendMessage = async () => {
-        if (!newMessage.trim() || loading) return;
+        if ((!newMessage.trim() && files.length === 0) || loading) return;
         setLoading(true);
         try {
-            await onSendMessage(newMessage.trim());
+            await onSendMessage(newMessage.trim(), files);
             setNewMessage("");
+            setFiles([]);
         } catch (error) {
             console.error("Failed to send message:", error);
         } finally {
@@ -48,6 +54,54 @@ export const MessageInput = ({
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
+        }
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files) {
+            const newFiles = Array.from(event.target.files);
+            setFiles((prevFiles) => [...prevFiles, ...newFiles]);
+        }
+        event.target.value = "";
+    };
+
+    const handleRemoveFile = (fileToRemove: File) => {
+        setFiles((prevFiles) => prevFiles.filter((file) => file !== fileToRemove));
+    };
+
+    const handlePreviewFile = (file: File) => {
+        setPreviewFile(file);
+    };
+
+    const handleClosePreview = () => {
+        setPreviewFile(null);
+    };
+
+    // Drag and drop handlers
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOver(false);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOver(true);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOver(false);
+
+        if (e.dataTransfer.files) {
+            const droppedFiles = Array.from(e.dataTransfer.files).filter(
+                (file) => file.type.startsWith("image/") || file.type.startsWith("video/"),
+            );
+            setFiles((prevFiles) => [...prevFiles, ...droppedFiles]);
         }
     };
 
@@ -68,7 +122,44 @@ export const MessageInput = ({
     }, []);
 
     return (
-        <Box sx={{ p: 2, borderTop: 1, borderColor: "divider", background: "#ffffff" }}>
+        <Box
+            sx={{
+                p: 2,
+                borderTop: 1,
+                borderColor: "divider",
+                background: "#ffffff",
+                position: "relative",
+            }}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+        >
+            {/* Drag overlay */}
+            {dragOver && (
+                <Box
+                    sx={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: "rgba(25, 118, 210, 0.3)",
+                        border: "2px dashed",
+                        borderColor: "primary.main",
+                        borderRadius: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 10,
+                    }}
+                >
+                    <Typography variant="h6" color="primary.main">
+                        Drop files here to attach
+                    </Typography>
+                </Box>
+            )}
+
             {/* Reply section */}
             {replyingTo && (
                 <Box
@@ -98,8 +189,16 @@ export const MessageInput = ({
                 </Box>
             )}
 
+            {/* Enhanced Media Preview */}
+            <MediaPreview
+                files={files}
+                onRemoveFile={handleRemoveFile}
+                onPreviewFile={handlePreviewFile}
+            />
+
             <MessageInputActions
                 newMessage={newMessage}
+                files={files}
                 isConnected={isConnected}
                 loading={loading}
                 emojiPickerAnchor={emojiPickerAnchor}
@@ -113,15 +212,9 @@ export const MessageInput = ({
                     ref={fileInputRef}
                     type="file"
                     style={{ display: "none" }}
-                    onChange={(event) => {
-                        const files = event.target.files!;
-                        if (files && files.length > 0) {
-                            console.log(files);
-                        }
-                        event.target.value = "";
-                    }}
+                    onChange={handleFileChange}
                     multiple
-                    accept="image/*"
+                    accept="image/*,video/*"
                 />
                 <TextField
                     ref={textFieldRef}
@@ -143,6 +236,7 @@ export const MessageInput = ({
                     }}
                 />
             </MessageInputActions>
+
             {!isConnected && (
                 <Typography
                     variant="caption"
@@ -154,9 +248,12 @@ export const MessageInput = ({
                         mt: 1,
                     }}
                 >
-                    <PowerOff sx={{ fontSize: 14, mr: 0.5 }} /> You're desconnected. Reconnecting...
+                    <PowerOff sx={{ fontSize: 14, mr: 0.5 }} /> You're disconnected. Reconnecting...
                 </Typography>
             )}
+
+            {/* File Preview Modal */}
+            <FilePreviewModal file={previewFile} onClose={handleClosePreview} />
         </Box>
     );
 };

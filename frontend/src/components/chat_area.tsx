@@ -23,7 +23,7 @@ type ChatAreaProps = {
     messages: types.Message[];
     user: types.User;
     connectionStatus: ConnectionStatus;
-    onSendMessage: (content: string) => Promise<void>;
+    onSendMessage: (content: string, files: File[]) => Promise<void>;
     replyingTo: types.Message | null;
     onSetReply: (message: types.Message) => void;
     onCancelReply: () => void;

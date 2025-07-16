@@ -1,8 +1,10 @@
 import { memo, useState } from "react";
-import { formatTime } from "../helpers/format";
-import * as types from "../api/types";
+import { formatTime } from "../../helpers/format";
+import * as types from "../../api/types";
 import { Box, Stack, Avatar, Typography } from "@mui/material";
 import { Reply } from "@mui/icons-material";
+import { MediaGrid } from "./media_grid";
+import { ImageViewer } from "./image_viewer";
 
 // Defines the position of a message within a sequence from the same user.
 export type MessageSequenceType = "single" | "first" | "middle" | "last";
@@ -42,13 +44,29 @@ export const Message = memo(
                 ? message.content.slice(0, characterLimit)
                 : message.content;
 
+        const [lightboxOpen, setLightboxOpen] = useState(false);
+        const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+        const handleOpenLightbox = (index: number) => {
+            setCurrentImageIndex(index);
+            setLightboxOpen(true);
+        };
+
+        const handleCloseLightbox = () => {
+            setLightboxOpen(false);
+        };
+
+        const handleNavigateImage = (index: number) => {
+            setCurrentImageIndex(index);
+        };
+
         /**
          * Calculates the border radius for the message bubble to create a grouped effect.
          * @returns The CSS border-radius value.
          */
         const getBorderRadius = () => {
             const borderRadius = "1rem";
-            const sharpRadius = "0.25rem"; // A slight radius for a smoother look.
+            const sharpRadius = "0.25rem";
 
             if (isOwnMessage) {
                 switch (sequenceType) {
@@ -59,7 +77,6 @@ export const Message = memo(
                         return borderRadius;
                 }
             } else {
-                // Other users' messages
                 switch (sequenceType) {
                     case "first":
                         return `${borderRadius} ${borderRadius} ${borderRadius} ${sharpRadius}`;
@@ -71,6 +88,9 @@ export const Message = memo(
                 }
             }
         };
+
+        const hasMedia = message.media && message.media.length > 0;
+        const hasContent = message.content && message.content.trim().length > 0;
 
         return (
             <Stack
@@ -193,8 +213,8 @@ export const Message = memo(
 
                             <Box
                                 sx={{
-                                    px: 2,
-                                    py: 1.5,
+                                    px: hasMedia && !hasContent ? 0.5 : 1,
+                                    py: hasMedia && !hasContent ? 0.5 : 1,
                                     borderRadius: getBorderRadius(),
                                     color: isOwnMessage ? "common.white" : "text.primary",
                                     bgcolor: isOwnMessage ? "primary.main" : "grey.200",
@@ -204,7 +224,7 @@ export const Message = memo(
                                     marginLeft: needsPadding ? `${avatarSize + 8}px` : undefined,
                                     wordBreak: "break-word",
                                     overflowWrap: "break-word",
-                                    minWidth: "120px",
+                                    minWidth: hasMedia && !hasContent ? "auto" : "120px",
                                 }}
                             >
                                 {/* Username header inside bubble for other users */}
@@ -216,6 +236,7 @@ export const Message = memo(
                                             mb: 0.5,
                                             borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
                                             pb: 0.5,
+                                            mx: hasMedia && !hasContent ? 1.5 : 0,
                                         }}
                                     >
                                         <Typography
@@ -231,17 +252,36 @@ export const Message = memo(
                                     </Box>
                                 )}
 
+                                {/* Media section */}
+                                {hasMedia && (
+                                    <Box
+                                        sx={{
+                                            mb: hasContent ? 1 : 0,
+                                        }}
+                                    >
+                                        <MediaGrid
+                                            media={message.media!}
+                                            onImageClick={handleOpenLightbox}
+                                            maxHeight={250}
+                                        />
+                                    </Box>
+                                )}
+
                                 {/* Message content */}
-                                <Typography
-                                    sx={{
-                                        whiteSpace: "pre-wrap",
-                                        wordBreak: "break-word",
-                                        overflowWrap: "break-word",
-                                    }}
-                                >
-                                    {displayContent}
-                                    {isLongMessage && !isExpanded && "..."}
-                                </Typography>
+                                {hasContent && (
+                                    <Box sx={{ px: hasMedia && !hasContent ? 1.5 : 0 }}>
+                                        <Typography
+                                            sx={{
+                                                whiteSpace: "pre-wrap",
+                                                wordBreak: "break-word",
+                                                overflowWrap: "break-word",
+                                            }}
+                                        >
+                                            {displayContent}
+                                            {isLongMessage && !isExpanded && "..."}
+                                        </Typography>
+                                    </Box>
+                                )}
 
                                 {isLongMessage && (
                                     <Box
@@ -249,6 +289,7 @@ export const Message = memo(
                                             display: "flex",
                                             justifyContent: "flex-start",
                                             mb: 0.5,
+                                            px: hasMedia && !hasContent ? 1.5 : 0,
                                         }}
                                     >
                                         <Typography
@@ -277,6 +318,7 @@ export const Message = memo(
                                     sx={{
                                         display: "flex",
                                         justifyContent: "flex-end",
+                                        px: hasMedia && !hasContent ? 1.5 : 0,
                                     }}
                                 >
                                     <Typography
@@ -298,6 +340,16 @@ export const Message = memo(
                         </div>
                     </Box>
                 </Stack>
+
+                {/* Image Viewer */}
+                {lightboxOpen && hasMedia && (
+                    <ImageViewer
+                        media={message.media!}
+                        currentIndex={currentImageIndex}
+                        onClose={handleCloseLightbox}
+                        onNavigate={handleNavigateImage}
+                    />
+                )}
             </Stack>
         );
     },

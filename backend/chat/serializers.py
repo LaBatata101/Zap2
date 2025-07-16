@@ -5,7 +5,7 @@ from django.core.serializers import serialize
 from rest_framework import serializers
 from rest_framework.fields import valid_datetime
 
-from .models import ChatRoom, Membership, Message, Profile
+from .models import ChatRoom, Media, Membership, Message, Profile
 
 
 class ProfileSerializer(serializers.ModelSerializer[Profile]):
@@ -22,7 +22,7 @@ class UserSerializer(serializers.ModelSerializer[User]):
         fields = ("id", "username", "profile")
 
 
-class RepliedMessageSerializer(serializers.ModelSerializer):
+class RepliedMessageSerializer(serializers.ModelSerializer[Message]):
     user = UserSerializer(read_only=True)
 
     class Meta:
@@ -30,19 +30,37 @@ class RepliedMessageSerializer(serializers.ModelSerializer):
         fields = ("id", "user", "content")
 
 
-class MessageSerializer(serializers.ModelSerializer):
+class MediaSerializer(serializers.ModelSerializer[Media]):
+    class Meta:
+        model = Media
+        fields = ("id", "file", "file_type")
+
+
+class MessageSerializer(serializers.ModelSerializer[Message]):
     user = UserSerializer(read_only=True)
     reply_to = RepliedMessageSerializer(read_only=True)
     reply_to_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    media = MediaSerializer(many=True, read_only=True)
+    media_files = serializers.ListField(child=serializers.FileField(), write_only=True, required=False)
 
     class Meta:
         model = Message
-        fields = ["id", "room", "user", "content", "timestamp", "reply_to", "reply_to_id"]
-        read_only_fields = ("user", "reply_to")
+        fields = ["id", "room", "user", "content", "timestamp", "reply_to", "reply_to_id", "media", "media_files"]
+        read_only_fields = ("user", "reply_to", "media")
+
+    def validate(self, data):
+        content = data.get("content")
+        media_files = self.context["request"].FILES.getlist("media_files")
+
+        if not content and not media_files:
+            raise serializers.ValidationError("Message must have content or at least one media file.")
+        return data
 
     @override
     def create(self, validated_data):
         reply_to_id = validated_data.pop("reply_to_id", None)
+        media_files = validated_data.pop("media_files", [])
+
         if reply_to_id:
             try:
                 reply_to_message = Message.objects.get(id=reply_to_id)
@@ -50,7 +68,12 @@ class MessageSerializer(serializers.ModelSerializer):
             except Message.DoesNotExist:
                 raise serializers.ValidationError({"reply_to_id": "Referenced message does not exist."})
 
-        return super().create(validated_data)
+        message = super().create(validated_data)
+
+        for file in media_files:
+            Media.objects.create(message=message, file=file, file_type=file.content_type)
+
+        return message
 
     @override
     def update(self, instance, validated_data):
@@ -90,7 +113,11 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
 
     def get_last_message(self, obj):
         last_message = obj.messages.last()
-        return last_message.content if last_message else None
+        if not last_message:
+            return None
+        if last_message.media.exists():
+            return "📷 Media"
+        return last_message.content
 
     def get_last_message_timestamp(self, obj):
         last_message = obj.messages.last()

@@ -4,6 +4,12 @@ export type User = {
     is_admin: boolean;
 };
 
+export type Media = {
+    id: number;
+    file: string;
+    file_type: string;
+};
+
 export type Message = {
     id: number;
     room: number;
@@ -11,6 +17,7 @@ export type Message = {
     content: string;
     timestamp: string;
     reply_to?: Message;
+    media?: Media[];
 };
 
 export type ChatRoom = {

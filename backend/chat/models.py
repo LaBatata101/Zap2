@@ -41,7 +41,7 @@ class ChatRoom(models.Model):
 class Message(models.Model):
     room = models.ForeignKey(ChatRoom, related_name="messages", on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    content = models.TextField()
+    content = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     reply_to = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="replies")
 
@@ -52,6 +52,16 @@ class Message(models.Model):
     @override
     def __str__(self):
         return f"{self.user}: {self.content}"
+
+
+@final
+class Media(models.Model):
+    message = models.ForeignKey(Message, related_name="media", on_delete=models.CASCADE)
+    file = models.FileField(upload_to="chat_media/")
+    file_type = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"Media for Message {self.message.id}: {self.file.name}"
 
 
 @receiver(post_save, sender=User)

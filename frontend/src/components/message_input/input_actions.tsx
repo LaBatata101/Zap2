@@ -2,10 +2,11 @@ import { memo } from "react";
 import { CircularProgress, IconButton, Popover, Stack } from "@mui/material";
 import { AttachFile, Send, SentimentSatisfiedAlt } from "@mui/icons-material";
 import EmojiPicker, { EmojiClickData, EmojiStyle } from "emoji-picker-react";
-import { StyledTooltip } from "./styled";
+import { StyledTooltip } from "../styled";
 
 type MessageInputActionsProps = {
     newMessage: string;
+    files: File[];
     isConnected: boolean;
     loading: boolean;
     emojiPickerAnchor: HTMLElement | null;
@@ -20,6 +21,7 @@ type MessageInputActionsProps = {
 export const MessageInputActions = memo(
     ({
         newMessage,
+        files,
         isConnected,
         loading,
         emojiPickerAnchor,
@@ -73,7 +75,7 @@ export const MessageInputActions = memo(
                 </Popover>
                 <IconButton
                     onClick={onSendMessage}
-                    disabled={!newMessage.trim() || !isConnected}
+                    disabled={(!newMessage.trim() && files.length === 0) || !isConnected}
                     sx={{
                         color: "#1976d2",
                         "&:disabled": {

@@ -12,14 +12,21 @@ export class APIService {
         this.baseURL = API_CONFIG.baseURL;
     }
 
-    async request(endpoint: string, options: RequestInit = {}) {
+    async request(endpoint: string, options: RequestInit = {}, isFormData: boolean = false) {
         const url = `${this.baseURL}${endpoint}`;
+
+        const headers = {
+            "X-CSRFToken": await this.getCSRF(),
+            ...options.headers,
+        };
+
+        if (!isFormData) {
+            // @ts-ignore
+            headers["Content-Type"] = "application/json";
+        }
+
         const config: RequestInit = {
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": await this.getCSRF(),
-                ...options.headers,
-            },
+            headers: headers,
             credentials: "include",
             ...options,
         };
@@ -115,15 +122,15 @@ export class APIService {
         return response.data;
     }
 
-    async sendMessage(roomId: number, messagePaylod: { message: string; reply_to_id?: number }) {
-        return this.request("/messages/", {
-            method: "POST",
-            body: JSON.stringify({
-                room: roomId,
-                content: messagePaylod.message,
-                reply_to_id: messagePaylod.reply_to_id,
-            }),
-        });
+    async sendMessage(formData: FormData) {
+        return this.request(
+            "/messages/",
+            {
+                method: "POST",
+                body: formData,
+            },
+            true,
+        );
     }
 
     async checkIfUserExists(username: string): Promise<boolean> {
@@ -214,11 +221,11 @@ export class WebSocketService {
         }
     }
 
-    sendMessage(message: { room_id: number; message: string; reply_to_id?: number }) {
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify(message));
-        }
-    }
+    // sendMessage(message: { room_id: number; message: string; reply_to_id?: number }) {
+    //     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+    //         this.socket.send(JSON.stringify(message));
+    //     }
+    // }
 
     on(event: EventTypeStrings, callback: EventCallback) {
         const key = EventType[event];

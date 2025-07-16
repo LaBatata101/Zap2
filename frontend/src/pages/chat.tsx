@@ -332,19 +332,23 @@ export const ChatApp = () => {
         }
     };
 
-    const handleSendMessage = async (content: string) => {
+    const handleSendMessage = async (content: string, files: File[]) => {
         if (!currentRoom) return;
 
         try {
-            const messagePayload: { message: string; room_id: number; reply_to_id?: number } = {
-                message: content,
-                room_id: currentRoom.id,
-            };
-            if (replyingTo) {
-                messagePayload.reply_to_id = replyingTo.id;
+            const formData = new FormData();
+            formData.append("room", currentRoom.id.toString());
+            if (content) {
+                formData.append("content", content);
             }
+            if (replyingTo) {
+                formData.append("reply_to_id", replyingTo.id.toString());
+            }
+            files.forEach((file) => {
+                formData.append("media_files", file);
+            });
 
-            wsService.current.sendMessage(messagePayload);
+            await apiService.current.sendMessage(formData);
 
             setReplyingTo(null);
         } catch (error) {
