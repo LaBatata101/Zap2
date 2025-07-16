@@ -14,7 +14,6 @@ enum ChatActionType {
     Logout,
     SelectRoom,
     SetMessages,
-    AddMessage,
     SetRooms,
     UpdatedRoomMetadata,
     ResetUnreadCount,
@@ -56,7 +55,6 @@ type ChatAction =
       }
     | { type: ChatActionType.SelectRoom; payload: ChatRoom }
     | { type: ChatActionType.SetMessages; payload: Message[] }
-    | { type: ChatActionType.AddMessage; payload: Message }
     | { type: ChatActionType.SetRooms; payload: ChatRoom[] }
     | { type: ChatActionType.SetConnectionStatus; payload: ConnectionStatus }
     | { type: ChatActionType.SetSearchTerm; payload: string }
