@@ -131,7 +131,7 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
         try:
             membership = Membership.objects.get(user=user, room=obj)
             last_read = membership.last_read_timestamp
-            return Message.objects.filter(room=obj, timestamp__gt=last_read).count()
+            return Message.objects.filter(room=obj, timestamp__gt=last_read).exclude(user=user).count()
         except Membership.DoesNotExist:
             return 0
 

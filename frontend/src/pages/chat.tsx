@@ -96,10 +96,7 @@ function chatReducer(state: ChatState, action: ChatAction) {
         case ChatActionType.SetRooms:
             return {
                 ...state,
-                rooms: action.payload.map((room) => ({
-                    ...room,
-                    unreadCount: room.unread_count,
-                })),
+                rooms: action.payload,
             };
         case ChatActionType.ReceiveMessage: {
             const message = action.payload;
@@ -134,6 +131,9 @@ function chatReducer(state: ChatState, action: ChatAction) {
                 rooms: state.rooms.map((room) =>
                     room.id === action.payload ? { ...room, unread_count: 0 } : room,
                 ),
+                currentRoom: state.currentRoom
+                    ? { ...state.currentRoom, unread_count: 0 }
+                    : undefined,
             };
         case ChatActionType.SetMessages:
             return { ...state, messages: action.payload };
@@ -310,10 +310,6 @@ export const ChatApp = () => {
             if (currentRoom?.id === room.id) return;
             setReplyingTo(null);
             dispatch({ type: ChatActionType.SelectRoom, payload: room });
-
-            if (room.unread_count > 0) {
-                dispatch({ type: ChatActionType.ResetUnreadCount, payload: room.id });
-            }
         },
         [currentRoom],
     );
@@ -347,7 +343,10 @@ export const ChatApp = () => {
             });
 
             await apiService.current.sendMessage(formData);
-
+            if (currentRoom.unread_count > 0) {
+                currentRoom.unread_count = 0;
+                dispatch({ type: ChatActionType.ResetUnreadCount, payload: currentRoom.id });
+            }
             setReplyingTo(null);
         } catch (error) {
             console.error("Failed to send message: ", error);
