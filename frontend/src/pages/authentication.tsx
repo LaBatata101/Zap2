@@ -51,7 +51,7 @@ const AuthCard = styled(Card)(({ theme }) => ({
     boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)",
     backdropFilter: "blur(10px)",
     border: "1px solid rgba(255, 255, 255, 0.1)",
-    background: "rgba(255, 255, 255, 0.95)",
+    background: theme.palette.background.paper,
     padding: theme.spacing(3),
     [theme.breakpoints.up("sm")]: {
         padding: theme.spacing(4),
@@ -125,7 +125,7 @@ export const AuthPage = ({
         severity: "success" as "success" | "error",
     });
     const [usernameExists, setUsernameExists] = useState(false);
-    const [usernameTimer, setUsernameTimer] = useState<number | null>(null);
+    const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
 
     const checkUsernameExists = async (username: string) => {
         if (usernameTimer) {
@@ -244,13 +244,6 @@ export const AuthPage = ({
                             sx={{ fontSize: { xs: "1.8rem", sm: "2.125rem" } }}
                         >
                             Welcome to Zap2
-                        </Typography>
-                        <Typography
-                            variant="body1"
-                            color="textSecondary"
-                            sx={{ textAlign: "center", fontSize: { xs: "0.9rem", sm: "1rem" } }}
-                        >
-                            Connect and collaborate with your team
                         </Typography>
                     </BrandContainer>
 
