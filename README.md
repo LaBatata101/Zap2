@@ -28,3 +28,55 @@ The project is architected as a decoupled frontend and backend application.
     - Drag-and-drop support for file attachments.
     - A "scroll to bottom" button appears when you scroll up through the message history.
     - Responsive design that adapts to mobile and desktop screens.
+
+## Getting Started
+
+To get the project up and running locally, you'll need to have Docker and Docker Compose installed.
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/LaBatata101/Zap2 && cd Zap2
+```
+
+### 2. Setup Environment variables for the Backend
+
+Create a `.env` file in the root of the project with the following contents.
+
+```
+POSTGRES_DB=dev_db
+POSTGRES_USER=dev_user
+POSTGRES_PASSWORD=123456
+DB_NAME=dev_db
+DB_USER=dev_user
+DB_PASS=123456
+DB_HOST=db
+DB_PORT=5432
+```
+
+> **Note**: The `DB_HOST` is set to db, which is the service name of the PostgreSQL container in the `docker-compose.yml` file.
+
+### 3. Build and Run the Containers
+
+From the root directory of the project, run the following command:
+
+```bash
+docker-compose up --build -d
+```
+
+This command will build the Docker images for the frontend and backend services and start all the containers in detached mode (`-d`).
+
+### 4. Apply Database Migrations
+
+Once the containers are running, you need to apply the initial database migrations for the Django application.
+
+```bash
+docker-compose exec backend uv manage.py migrate
+```
+
+### 5. Access the Application
+
+You're all set! The application is now running.
+
+- **Frontend**: Open your browser and go to [http://localhost:5173]()
+- **Backend API**: The API is accessible at [http://localhost:8000/api/]()
