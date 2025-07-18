@@ -243,7 +243,7 @@ export const AuthPage = ({
                             gutterBottom
                             sx={{ fontSize: { xs: "1.8rem", sm: "2.125rem" } }}
                         >
-                            Welcome to Zap2
+                            Welcome to Zap²
                         </Typography>
                     </BrandContainer>
 
@@ -319,9 +319,9 @@ export const AuthPage = ({
                                     authMode === AuthMode.login
                                         ? loginForm.handleChange
                                         : (e) => {
-                                              registrationForm.handleChange(e);
-                                              checkUsernameExists(e.target.value);
-                                          }
+                                            registrationForm.handleChange(e);
+                                            checkUsernameExists(e.target.value);
+                                        }
                                 }
                                 onBlur={
                                     authMode === AuthMode.login
@@ -467,8 +467,8 @@ export const AuthPage = ({
                                 {loading
                                     ? "Please wait..."
                                     : authMode === AuthMode.login
-                                      ? "Sign in"
-                                      : "Sign up"}
+                                        ? "Sign in"
+                                        : "Sign up"}
                             </Button>
                         </Stack>
                     </form>
