@@ -86,6 +86,7 @@ class MessageSerializer(serializers.ModelSerializer[Message]):
     @override
     def update(self, instance, validated_data):
         reply_to_id = validated_data.pop("reply_to_id", None)
+        media_ids = validated_data.pop("media_ids", [])
 
         if reply_to_id:
             try:
@@ -96,7 +97,13 @@ class MessageSerializer(serializers.ModelSerializer[Message]):
         elif reply_to_id is None:
             validated_data["reply_to"] = None
 
-        return super().update(instance, validated_data)
+        message = super().update(instance, validated_data)
+
+        if media_ids:
+            media = MessageMedia.objects.filter(id__in=media_ids, message__isnull=True)
+            media.update(message=message)
+
+        return message
 
 
 class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
