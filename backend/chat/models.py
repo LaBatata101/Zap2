@@ -51,14 +51,15 @@ class Message(models.Model):
 
     @override
     def __str__(self):
-        return f"{self.user}: {self.content}"
+        return (
+            f"Message(user={self.user}, content={self.content}, timestamp={self.timestamp}, reply_to={self.reply_to})"
+        )
 
 
 @final
-class Media(models.Model):
-    message = models.ForeignKey(Message, related_name="media", on_delete=models.CASCADE)
-    file = models.FileField(upload_to="chat_media/")
-    file_type = models.CharField(max_length=100)
+class MessageMedia(models.Model):
+    message = models.ForeignKey(Message, related_name="media", on_delete=models.CASCADE, null=True, blank=True)
+    file = models.ImageField(upload_to="chat_media/")
 
     def __str__(self):
         return f"Media for Message {self.message.id}: {self.file.name}"

@@ -1,13 +1,14 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import (ChatRoomViewSet, CheckUsernameView, MessageViewSet,
-                    UserDetailView, UserLoginView, UserLogoutView,
-                    UserRegisterView, get_csrf)
+from .views import (ChatRoomViewSet, CheckUsernameView, MessageMediaViewSet,
+                    MessageViewSet, UserDetailView, UserLoginView,
+                    UserLogoutView, UserRegisterView, get_csrf)
 
 router = DefaultRouter()
 router.register("rooms", ChatRoomViewSet, basename="room")
 router.register("messages", MessageViewSet)
+router.register("media", MessageMediaViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

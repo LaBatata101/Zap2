@@ -3,7 +3,14 @@ import { AuthPage } from "./authentication";
 import { APIService, WebSocketService } from "../api";
 import { Sidebar, sidebarWidth } from "../components/sidebar";
 import { ChatArea } from "../components/chat_area";
-import { ChatRoom, LoginCredentials, Message, RegistrationCredentials, User } from "../api/types";
+import {
+    ChatRoom,
+    LoginCredentials,
+    Message,
+    MessagePayload,
+    RegistrationCredentials,
+    User,
+} from "../api/types";
 import { Box, useMediaQuery, useTheme } from "@mui/material";
 
 enum ChatActionType {
@@ -43,16 +50,16 @@ type ChatState = {
 
 type ChatAction =
     | {
-          type:
-              | ChatActionType.LoginStart
-              | ChatActionType.RegistrationStart
-              | ChatActionType.Logout
-              | ChatActionType.Error;
-      }
+        type:
+        | ChatActionType.LoginStart
+        | ChatActionType.RegistrationStart
+        | ChatActionType.Logout
+        | ChatActionType.Error;
+    }
     | {
-          type: ChatActionType.LoginSuccess | ChatActionType.RegistrationSuccess;
-          payload: { user: User };
-      }
+        type: ChatActionType.LoginSuccess | ChatActionType.RegistrationSuccess;
+        payload: { user: User };
+    }
     | { type: ChatActionType.SelectRoom; payload: ChatRoom }
     | { type: ChatActionType.SetMessages; payload: Message[] }
     | { type: ChatActionType.SetRooms; payload: ChatRoom[] }
@@ -105,14 +112,14 @@ function chatReducer(state: ChatState, action: ChatAction) {
             const updatedRooms = rooms.map((room) =>
                 room.id === message.room
                     ? {
-                          ...room,
-                          last_message: message.content,
-                          last_message_timestamp: message.timestamp,
-                          unread_count:
-                              currentRoom?.id === message.room
-                                  ? room.unread_count
-                                  : room.unread_count + 1,
-                      }
+                        ...room,
+                        last_message: message.content,
+                        last_message_timestamp: message.timestamp,
+                        unread_count:
+                            currentRoom?.id === message.room
+                                ? room.unread_count
+                                : room.unread_count + 1,
+                    }
                     : room,
             );
 
@@ -237,20 +244,10 @@ export const ChatApp = () => {
         if (currentRoom) {
             const fetchMessages = async () => {
                 try {
-                    dispatch({
-                        type: ChatActionType.SetConnectionStatus,
-                        payload: ConnectionStatus.Connecting,
-                    });
-
                     const messagesData = await apiService.current.getMessages(currentRoom.id);
                     dispatch({
                         type: ChatActionType.SetMessages,
                         payload: messagesData,
-                    });
-
-                    dispatch({
-                        type: ChatActionType.SetConnectionStatus,
-                        payload: ConnectionStatus.Connected,
                     });
                 } catch (error) {
                     console.error("Error fetching messages: ", error);
@@ -330,19 +327,26 @@ export const ChatApp = () => {
         if (!currentRoom) return;
 
         try {
-            const formData = new FormData();
-            formData.append("room", currentRoom.id.toString());
-            if (content) {
-                formData.append("content", content);
-            }
-            if (replyingTo) {
-                formData.append("reply_to_id", replyingTo.id.toString());
-            }
-            files.forEach((file) => {
-                formData.append("media_files", file);
-            });
+            const messagePayload: MessagePayload = {
+                content: content,
+                room: currentRoom.id,
+                media_ids: [],
+            };
 
-            await apiService.current.sendMessage(formData);
+            if (replyingTo) {
+                messagePayload.reply_to = replyingTo.id;
+            }
+            if (files.length > 0) {
+                const uploadedMedia = await Promise.all(
+                    Array.from(files).map((file) => apiService.current.sendMedia(file)),
+                );
+                const mediaIds = uploadedMedia.map((media) => media.id);
+                messagePayload.media_ids = mediaIds;
+            }
+
+            const response = await apiService.current.sendMessage(messagePayload);
+            wsService.current.sendMessage(response.data);
+
             if (currentRoom.unread_count > 0) {
                 currentRoom.unread_count = 0;
                 dispatch({ type: ChatActionType.ResetUnreadCount, payload: currentRoom.id });

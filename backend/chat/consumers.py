@@ -6,7 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 from chat.serializers import MessageSerializer
 
-from .models import ChatRoom, Message
+from .models import ChatRoom, Message, MessageMedia
 
 
 class UserChatConsumer(AsyncWebsocketConsumer):
@@ -35,57 +35,29 @@ class UserChatConsumer(AsyncWebsocketConsumer):
         for room in chat_rooms:
             await self.channel_layer.group_discard(f"chat_{room.id}", self.channel_name)
 
-    # @override
-    # async def receive(self, text_data=None, bytes_data=None):
-    #     data = json.loads(text_data)
-    #     message_content = data["message"]
-    #     room_id = data["room_id"]
-    #     reply_to_id = data.get("reply_to_id")
-    #
-    #     if not self.user.is_authenticated:
-    #         return
-    #
-    #     new_message = await self.save_message(self.user, room_id, message_content, reply_to_id)
-    #     if not new_message:
-    #         return None
-    #
-    #     serialized_message = await self.serialize_message(new_message)
-    #     await self.channel_layer.group_send(
-    #         f"chat_{room_id}",
-    #         {
-    #             "type": "chat.message",  # call the `chat_message` method
-    #             "message": serialized_message,
-    #         },
-    #     )
+    @override
+    async def receive(self, text_data=None, bytes_data=None):
+        data = json.loads(text_data)
+        room = data["room"]
+
+        if not self.user.is_authenticated:
+            return
+
+        await self.channel_layer.group_send(
+            f"chat_{room}",
+            {
+                "type": "chat.message",  # call the `chat_message` method
+                "message": text_data,
+            },
+        )
 
     async def chat_message(self, event):
-        await self.send(text_data=json.dumps(event["message"]))
+        await self.send(text_data=event["message"])
 
     @database_sync_to_async
     def get_user_chat_rooms(self, user):
         # return list(ChatRoom.objects.filter(members=user))
         return list(ChatRoom.objects.all())  # FIX: only return the rooms which the user is member of
-
-    @database_sync_to_async
-    def serialize_message(self, message):
-        return MessageSerializer(message).data
-
-    @database_sync_to_async
-    def save_message(self, user, room_id, message_content, reply_to_id=None):
-        try:
-            room = ChatRoom.objects.get(id=room_id)
-            # TODO:
-            # if user not in room.members.all():
-            #     return None
-
-            message_data = {"room": room, "user": user, "content": message_content}
-            if reply_to_id:
-                reply_to_message = Message.objects.get(id=reply_to_id, room=room)
-                message_data["reply_to"] = reply_to_message
-
-            return Message.objects.create(**message_data)
-        except (ChatRoom.DoesNotExist, Message.DoesNotExist):
-            return None
 
     @database_sync_to_async
     def check_room_access(self, user, room_id):

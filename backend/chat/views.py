@@ -1,7 +1,5 @@
 from typing import override
 
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Q
@@ -14,10 +12,11 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import ChatRoom, Membership, Message
+from .models import ChatRoom, Membership, Message, MessageMedia
 from .permissions import IsOwnerOrReadOnly
-from .serializers import (ChatRoomSerializer, MessageSerializer,
-                          RegisterSerializer, UserSerializer)
+from .serializers import (ChatRoomSerializer, MessageMediaSerializer,
+                          MessageSerializer, RegisterSerializer,
+                          UserSerializer)
 
 
 def get_csrf(request):
@@ -145,7 +144,6 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = (MultiPartParser, FormParser)
 
     @override
     def get_queryset(self):
@@ -157,18 +155,7 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
 
     @override
     def perform_create(self, serializer):
-        message = serializer.save(user=self.request.user)
-        channel_layer = get_channel_layer()
-        room_id = message.room.id
-        serialized_message = MessageSerializer(message, context={"request": self.request}).data
-
-        async_to_sync(channel_layer.group_send)(
-            f"chat_{room_id}",
-            {
-                "type": "chat.message",
-                "message": serialized_message,
-            },
-        )
+        serializer.save(user=self.request.user)
 
     @override
     def list(self, request: Request, *args, **kwargs):
@@ -193,3 +180,13 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
                 pass  # Room doesn’t exist, proceed with default response
 
         return super().list(request, *args, **kwargs)
+
+
+class MessageMediaViewSet(viewsets.ModelViewSet[MessageMedia]):
+    queryset = MessageMedia.objects.all()
+    serializer_class = MessageMediaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = (MultiPartParser,)
+
+    def perform_create(self, serializer):
+        serializer.save()

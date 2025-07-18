@@ -1,19 +1,28 @@
-import { ChatRoom, LoginCredentials, Message, RegistrationCredentials } from "./types";
+import {
+    ChatRoom,
+    LoginCredentials,
+    Media,
+    Message,
+    MessagePayload,
+    RegistrationCredentials,
+} from "./types";
+
+export const baseURL = "http://localhost:8000";
 
 const API_CONFIG = {
-    baseURL: "http://localhost:8000/api",
-    wsURL: "ws://localhost:8000/ws",
+    apiUrl: `${baseURL}/api`,
+    wsUrl: "ws://localhost:8000/ws",
 };
 
 export class APIService {
-    baseURL: string;
+    baseApiUrl: string;
 
     constructor() {
-        this.baseURL = API_CONFIG.baseURL;
+        this.baseApiUrl = API_CONFIG.apiUrl;
     }
 
     async request(endpoint: string, options: RequestInit = {}, isFormData: boolean = false) {
-        const url = `${this.baseURL}${endpoint}`;
+        const url = `${this.baseApiUrl}${endpoint}`;
 
         const headers = {
             "X-CSRFToken": await this.getCSRF(),
@@ -48,7 +57,7 @@ export class APIService {
     }
 
     async getCSRF() {
-        const response = await fetch(`${this.baseURL}/csrf/`, { credentials: "include" });
+        const response = await fetch(`${this.baseApiUrl}/csrf/`, { credentials: "include" });
         if (!response.ok) {
             throw new Error("Failed to get CSRF token");
         }
@@ -57,7 +66,7 @@ export class APIService {
     }
 
     async login(credentials: LoginCredentials) {
-        const response = await fetch(`${API_CONFIG.baseURL}/login/`, {
+        const response = await fetch(`${API_CONFIG.apiUrl}/login/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -75,7 +84,7 @@ export class APIService {
     }
 
     async register(credentials: RegistrationCredentials) {
-        const response = await fetch(`${API_CONFIG.baseURL}/register/`, {
+        const response = await fetch(`${API_CONFIG.apiUrl}/register/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -93,7 +102,7 @@ export class APIService {
     }
 
     async logout() {
-        await fetch(`${API_CONFIG.baseURL}/logout/`, {
+        await fetch(`${API_CONFIG.apiUrl}/logout/`, {
             method: "POST",
             credentials: "include",
 
@@ -122,15 +131,28 @@ export class APIService {
         return response.data;
     }
 
-    async sendMessage(formData: FormData) {
-        return this.request(
-            "/messages/",
+    async sendMessage(message: MessagePayload) {
+        return this.request("/messages/", {
+            method: "POST",
+            body: JSON.stringify(message),
+        });
+    }
+
+    async sendMedia(file: File): Promise<Media> {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await this.request(
+            "/media/",
             {
                 method: "POST",
                 body: formData,
             },
             true,
         );
+        if (response.status != 201) {
+            throw new Error("Failed to upload media");
+        }
+        return response.data;
     }
 
     async checkIfUserExists(username: string): Promise<boolean> {
@@ -183,7 +205,7 @@ export class WebSocketService {
         }
 
         this.shouldReconnect = true;
-        const wsUrl = `${API_CONFIG.wsURL}/chat/`;
+        const wsUrl = `${API_CONFIG.wsUrl}/chat/`;
         this.socket = new WebSocket(wsUrl);
 
         this.socket.onopen = () => {
@@ -221,11 +243,11 @@ export class WebSocketService {
         }
     }
 
-    // sendMessage(message: { room_id: number; message: string; reply_to_id?: number }) {
-    //     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-    //         this.socket.send(JSON.stringify(message));
-    //     }
-    // }
+    sendMessage(message: Message) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify(message));
+        }
+    }
 
     on(event: EventTypeStrings, callback: EventCallback) {
         const key = EventType[event];

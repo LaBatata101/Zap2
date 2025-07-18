@@ -7,7 +7,6 @@ export type User = {
 export type Media = {
     id: number;
     file: string;
-    file_type: string;
 };
 
 export type Message = {
@@ -18,6 +17,13 @@ export type Message = {
     timestamp: string;
     reply_to?: Message;
     media?: Media[];
+};
+
+export type MessagePayload = {
+    room: number;
+    content: string;
+    reply_to?: number;
+    media_ids: number[];
 };
 
 export type ChatRoom = {
