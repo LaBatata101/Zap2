@@ -25,18 +25,34 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                 onClick={() => onSelect(room)}
                 selected={isSelected}
                 sx={{
-                    borderRadius: 2,
+                    borderRadius: "10px",
+                    mx: 0.5,
+                    transition: "all 0.2s ease-in-out",
                     "&.Mui-selected": {
-                        backgroundColor: "action.hover",
-                        border: "1px solid",
-                        borderColor: "primary.main",
+                        backgroundColor: "rgba(59, 130, 246, 0.15)",
+                        borderLeft: "3px solid #3b82f6",
+                        transform: "translateX(2px)",
+                        "& .MuiListItemText-primary": {
+                            color: "primary.main",
+                        },
+                    },
+                    "&:hover": {
+                        backgroundColor: "rgba(59, 130, 246, 0.08)",
+                        transform: "translateX(1px)",
+                    },
+                    "&.Mui-selected:hover": {
+                        backgroundColor: "rgba(59, 130, 246, 0.2)",
                     },
                 }}
             >
                 <ListItemAvatar>
                     <Avatar
                         sx={{
-                            background: "linear-gradient(45deg, #1890ff, #722ed1)",
+                            background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                            boxShadow: isSelected
+                                ? "0 4px 12px rgba(59, 130, 246, 0.4)"
+                                : "0 2px 8px rgba(0, 0, 0, 0.2)",
+                            transition: "box-shadow 0.2s ease-in-out",
                         }}
                     >
                         {room.name.charAt(0).toUpperCase()}
@@ -45,10 +61,21 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                 <ListItemText
                     primary={
                         <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Typography variant="body1" fontWeight="medium">
+                            <Typography
+                                variant="body1"
+                                fontWeight={isSelected ? 600 : 500}
+                                sx={{
+                                    color: isSelected ? "primary.main" : "text.primary",
+                                    transition: "color 0.2s ease-in-out",
+                                }}
+                            >
                                 {room.name}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ fontSize: "0.75rem" }}
+                            >
                                 {room.last_message_timestamp &&
                                     formatTime(room.last_message_timestamp)}
                             </Typography>
@@ -70,6 +97,7 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                                     whiteSpace: "nowrap",
                                     minWidth: 0,
                                     mr: room.unread_count > 0 ? 1 : 0,
+                                    fontSize: "0.85rem",
                                 }}
                             >
                                 {room.last_message}
@@ -83,6 +111,11 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                                             "& .MuiBadge-badge": {
                                                 position: "static",
                                                 transform: "none",
+                                                background:
+                                                    "linear-gradient(135deg, #3b82f6, #2563eb)",
+                                                boxShadow: "0 2px 8px rgba(59, 130, 246, 0.3)",
+                                                fontWeight: 600,
+                                                fontSize: "0.75rem",
                                             },
                                         }}
                                     />
@@ -95,9 +128,6 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                             component: "div",
                         },
                         secondary: {
-                            noWrap: true,
-                            textOverflow: "ellipsis",
-                            color: "text.secondary",
                             component: "div",
                         },
                     }}

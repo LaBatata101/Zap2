@@ -9,8 +9,6 @@ import {
     Stack,
     Alert,
     Avatar,
-    ThemeProvider,
-    createTheme,
     Checkbox,
     FormControlLabel,
     ToggleButton,
@@ -28,17 +26,31 @@ import {
     VisibilityOff,
     MailOutline,
 } from "@mui/icons-material";
-import { styled } from "@mui/material/styles";
+import { styled, ThemeProvider } from "@mui/material/styles";
 import { useFormik } from "formik";
 import { APIService } from "../api";
+import { darkTheme } from "../theme";
 
 const AuthContainer = styled("div")(({ theme }) => ({
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #374151 100%)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: theme.spacing(2),
+    position: "relative",
+    overflow: "hidden",
+    "&::before": {
+        content: '""',
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background:
+            "radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 70%), radial-gradient(circle at 70% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 70%)",
+        pointerEvents: "none",
+    },
     [theme.breakpoints.up("sm")]: {
         padding: theme.spacing(3),
     },
@@ -47,12 +59,14 @@ const AuthContainer = styled("div")(({ theme }) => ({
 const AuthCard = styled(Card)(({ theme }) => ({
     maxWidth: 420,
     width: "100%",
-    borderRadius: (theme.shape.borderRadius as number) * 2,
-    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)",
-    backdropFilter: "blur(10px)",
+    borderRadius: 16,
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+    backdropFilter: "blur(16px)",
     border: "1px solid rgba(255, 255, 255, 0.1)",
-    background: theme.palette.background.paper,
+    background: "rgba(30, 41, 59, 0.95)",
     padding: theme.spacing(3),
+    position: "relative",
+    zIndex: 1,
     [theme.breakpoints.up("sm")]: {
         padding: theme.spacing(4),
     },
@@ -68,23 +82,12 @@ const BrandContainer = styled("div")(({ theme }) => ({
     },
 }));
 
-const BrandIcon = styled(Avatar)(({ theme }) => ({
-    background: "linear-gradient(135deg, #1890ff, #722ed1)",
+const BrandIcon = styled(Avatar)({
+    background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
     marginBottom: 16,
     width: 64,
     height: 64,
-    boxShadow: `0 8px 16px ${theme.palette.primary.main}4D`,
-}));
-
-const customTheme = createTheme({
-    palette: {
-        primary: {
-            main: "#1890ff",
-        },
-    },
-    shape: {
-        borderRadius: 8,
-    },
+    boxShadow: "0 8px 32px rgba(59, 130, 246, 0.3)",
 });
 
 const registrationScheme = yup.object().shape({
@@ -230,7 +233,7 @@ export const AuthPage = ({
     };
 
     return (
-        <ThemeProvider theme={customTheme}>
+        <ThemeProvider theme={darkTheme}>
             <AuthContainer>
                 <AuthCard>
                     <BrandContainer>
@@ -249,10 +252,11 @@ export const AuthPage = ({
 
                     <Box
                         sx={{
-                            p: "5px",
-                            mb: 5,
-                            bgcolor: "grey.200",
+                            p: "4px",
+                            mb: 4,
+                            bgcolor: "rgba(51, 65, 85, 0.8)",
                             borderRadius: "12px",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
                         }}
                     >
                         <ToggleButtonGroup
@@ -267,12 +271,14 @@ export const AuthPage = ({
                                 sx={{
                                     border: 0,
                                     borderRadius: "8px !important",
+                                    color: "text.secondary",
                                     "&.Mui-selected": {
-                                        bgcolor: "white",
-                                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                                        bgcolor: "rgba(59, 130, 246, 0.2)",
+                                        color: "primary.main",
+                                        boxShadow: "0 2px 8px rgba(59, 130, 246, 0.2)",
                                     },
                                     "&.Mui-selected:hover": {
-                                        bgcolor: "white",
+                                        bgcolor: "rgba(59, 130, 246, 0.3)",
                                     },
                                 }}
                             >
@@ -283,12 +289,14 @@ export const AuthPage = ({
                                 sx={{
                                     border: 0,
                                     borderRadius: "8px !important",
+                                    color: "text.secondary",
                                     "&.Mui-selected": {
-                                        bgcolor: "white",
-                                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                                        bgcolor: "rgba(59, 130, 246, 0.2)",
+                                        color: "primary.main",
+                                        boxShadow: "0 2px 8px rgba(59, 130, 246, 0.2)",
                                     },
                                     "&.Mui-selected:hover": {
-                                        bgcolor: "white",
+                                        bgcolor: "rgba(59, 130, 246, 0.3)",
                                     },
                                 }}
                             >
@@ -319,9 +327,9 @@ export const AuthPage = ({
                                     authMode === AuthMode.login
                                         ? loginForm.handleChange
                                         : (e) => {
-                                            registrationForm.handleChange(e);
-                                            checkUsernameExists(e.target.value);
-                                        }
+                                              registrationForm.handleChange(e);
+                                              checkUsernameExists(e.target.value);
+                                          }
                                 }
                                 onBlur={
                                     authMode === AuthMode.login
@@ -467,8 +475,8 @@ export const AuthPage = ({
                                 {loading
                                     ? "Please wait..."
                                     : authMode === AuthMode.login
-                                        ? "Sign in"
-                                        : "Sign up"}
+                                      ? "Sign in"
+                                      : "Sign up"}
                             </Button>
                         </Stack>
                     </form>

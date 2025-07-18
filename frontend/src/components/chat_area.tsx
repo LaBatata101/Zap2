@@ -65,14 +65,23 @@ export const ChatArea = ({
                     height: "100%",
                     textAlign: "center",
                     p: 3,
-                    bgcolor: "grey.100",
+                    bgcolor: "background.default",
+                    background:
+                        "linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)",
                 }}
             >
-                <MessageIcon sx={{ fontSize: 64, color: "grey.400", mb: 2 }} />
-                <Typography variant="h5" color="text.secondary">
+                <MessageIcon
+                    sx={{
+                        fontSize: 80,
+                        color: "text.secondary",
+                        mb: 3,
+                        opacity: 0.6,
+                    }}
+                />
+                <Typography variant="h5" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
                     Select a room to start chatting
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
                     Choose a room from the sidebar to begin your conversation
                 </Typography>
             </Box>
@@ -81,32 +90,76 @@ export const ChatArea = ({
 
     return (
         <Stack sx={{ height: "100%", width: "100%" }}>
-            <AppBar position="static" color="inherit" elevation={1}>
-                <Toolbar>
+            <AppBar
+                position="static"
+                color="inherit"
+                elevation={0}
+                sx={{
+                    bgcolor: "background.paper",
+                    borderBottom: "1px solid #374151",
+                    backdropFilter: "blur(10px)",
+                }}
+            >
+                <Toolbar sx={{ minHeight: "64px !important" }}>
                     {isMobile && (
                         <IconButton
                             color="inherit"
                             aria-label="open drawer"
                             edge="start"
                             onClick={onMenuClick}
-                            sx={{ mr: 2 }}
+                            sx={{
+                                mr: 2,
+                                color: "text.secondary",
+                                "&:hover": {
+                                    color: "primary.main",
+                                    backgroundColor: "rgba(59, 130, 246, 0.1)",
+                                },
+                            }}
                         >
                             <MenuIcon />
                         </IconButton>
                     )}
-                    <Avatar sx={{ mr: 2, background: "linear-gradient(45deg, #1890ff, #722ed1)" }}>
+                    <Avatar
+                        sx={{
+                            mr: 2,
+                            background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                            boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
+                        }}
+                    >
                         {currentRoom.name.charAt(0).toUpperCase()}
                     </Avatar>
-                    <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                    <Typography
+                        variant="h6"
+                        color="text.primary"
+                        sx={{ flexGrow: 1, fontWeight: 600 }}
+                    >
                         {currentRoom.name}
                     </Typography>
-                    <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)}>
+                    <IconButton
+                        onClick={(e) => setMenuAnchor(e.currentTarget)}
+                        sx={{
+                            color: "text.secondary",
+                            "&:hover": {
+                                color: "primary.main",
+                                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                            },
+                        }}
+                    >
                         <MoreVert />
                     </IconButton>
                     <Menu
                         anchorEl={menuAnchor}
                         open={Boolean(menuAnchor)}
                         onClose={() => setMenuAnchor(null)}
+                        slotProps={{
+                            paper: {
+                                sx: {
+                                    bgcolor: "background.paper",
+                                    border: "1px solid #374151",
+                                    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
+                                },
+                            },
+                        }}
                     >
                         <MenuItem>Room Info</MenuItem>
                         <MenuItem>Members</MenuItem>

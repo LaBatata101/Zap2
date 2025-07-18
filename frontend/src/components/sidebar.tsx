@@ -28,8 +28,9 @@ const StyledDrawer = styled(Drawer)({
     "& .MuiDrawer-paper": {
         width: sidebarWidth,
         boxSizing: "border-box",
-        borderRight: "1px solid #f0f0f0",
-        background: "#ffffff",
+        borderRight: "1px solid #374151",
+        background: "#1e293b",
+        backgroundImage: "none",
     },
 });
 
@@ -84,7 +85,14 @@ export const Sidebar = ({
 
     const drawerContent = (
         <>
-            <Box sx={{ p: 2, borderBottom: "1px solid #f0f0f0" }}>
+            <Box
+                sx={{
+                    p: 2,
+                    borderBottom: "1px solid #374151",
+                    background:
+                        "linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)",
+                }}
+            >
                 <Stack spacing={2}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Stack direction="row" spacing={1.5} alignItems="center">
@@ -94,32 +102,69 @@ export const Sidebar = ({
                                 variant="dot"
                                 sx={{
                                     "& .MuiBadge-badge": {
-                                        backgroundColor: "#44b700",
-                                        color: "#44b700",
+                                        backgroundColor: "#10b981",
+                                        color: "#10b981",
+                                        border: "2px solid #1e293b",
+                                        width: 12,
+                                        height: 12,
                                     },
                                 }}
                             >
-                                <Avatar sx={{ bgcolor: "primary.main", width: 40, height: 40 }}>
+                                <Avatar
+                                    sx={{
+                                        background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                        width: 40,
+                                        height: 40,
+                                        boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
+                                    }}
+                                >
                                     <Person />
                                 </Avatar>
                             </Badge>
                             <Box>
-                                <Typography variant="subtitle1" fontWeight="bold">
+                                <Typography
+                                    variant="subtitle1"
+                                    fontWeight="bold"
+                                    color="text.primary"
+                                >
                                     {user.username}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography
+                                    variant="body2"
+                                    color="success.main"
+                                    sx={{ fontSize: "0.8rem" }}
+                                >
                                     Online
                                 </Typography>
                             </Box>
                         </Stack>
                         <Stack direction="row">
                             <StyledTooltip title="Configurations">
-                                <IconButton size="small">
+                                <IconButton
+                                    size="small"
+                                    sx={{
+                                        color: "text.secondary",
+                                        "&:hover": {
+                                            color: "primary.main",
+                                            backgroundColor: "rgba(59, 130, 246, 0.1)",
+                                        },
+                                    }}
+                                >
                                     <Settings />
                                 </IconButton>
                             </StyledTooltip>
                             <StyledTooltip title="Logout">
-                                <IconButton size="small" onClick={onLogout}>
+                                <IconButton
+                                    size="small"
+                                    sx={{
+                                        color: "text.secondary",
+                                        "&:hover": {
+                                            color: "error.main",
+                                            backgroundColor: "rgba(239, 68, 68, 0.1)",
+                                        },
+                                    }}
+                                    onClick={onLogout}
+                                >
                                     <Logout />
                                 </IconButton>
                             </StyledTooltip>
@@ -130,16 +175,23 @@ export const Sidebar = ({
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         size="small"
+                        sx={{
+                            "& .MuiOutlinedInput-root": {
+                                backgroundColor: "rgba(51, 65, 85, 0.5)",
+                                borderRadius: "10px",
+                                "& input::placeholder": {
+                                    color: "text.secondary",
+                                    opacity: 0.7,
+                                },
+                            },
+                        }}
                         slotProps={{
                             input: {
                                 startAdornment: (
                                     <InputAdornment position="start">
-                                        <Search />
+                                        <Search sx={{ color: "text.secondary", fontSize: 20 }} />
                                     </InputAdornment>
                                 ),
-                                sx: {
-                                    borderRadius: "40px",
-                                },
                             },
                         }}
                     />
@@ -153,10 +205,28 @@ export const Sidebar = ({
                     alignItems="center"
                     sx={{ px: 2, py: 1 }}
                 >
-                    <Typography variant="overline" color="text.secondary">
+                    <Typography
+                        variant="overline"
+                        color="text.secondary"
+                        sx={{ fontWeight: 600, fontSize: "0.75rem" }}
+                    >
                         Chats
                     </Typography>
-                    <Button startIcon={<Add />} size="small" onClick={() => setShowRoomModal(true)}>
+                    <Button
+                        startIcon={<Add />}
+                        size="small"
+                        onClick={() => setShowRoomModal(true)}
+                        sx={{
+                            minWidth: "auto",
+                            px: 1.5,
+                            py: 0.5,
+                            borderRadius: "6px",
+                            color: "primary.main",
+                            "&:hover": {
+                                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                            },
+                        }}
+                    >
                         New
                     </Button>
                 </Stack>

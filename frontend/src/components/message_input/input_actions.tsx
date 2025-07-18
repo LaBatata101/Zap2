@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { CircularProgress, IconButton, Popover, Stack } from "@mui/material";
 import { AttachFile, Send, SentimentSatisfiedAlt } from "@mui/icons-material";
-import EmojiPicker, { EmojiClickData, EmojiStyle } from "emoji-picker-react";
+import EmojiPicker, { EmojiClickData, EmojiStyle, Theme } from "emoji-picker-react";
 import { StyledTooltip } from "../styled";
 
 type MessageInputActionsProps = {
@@ -38,8 +38,10 @@ export const MessageInputActions = memo(
                     <IconButton
                         onClick={onAttachClick}
                         sx={{
+                            color: "text.secondary",
                             "&:hover": {
-                                color: "#1976d2",
+                                color: "primary.main",
+                                backgroundColor: "action.hover",
                             },
                         }}
                     >
@@ -51,8 +53,10 @@ export const MessageInputActions = memo(
                     <IconButton
                         onClick={onEmojiPickerOpen}
                         sx={{
+                            color: "text.secondary",
                             "&:hover": {
-                                color: "#1976d2",
+                                color: "primary.main",
+                                backgroundColor: "action.hover",
                             },
                         }}
                     >
@@ -65,21 +69,36 @@ export const MessageInputActions = memo(
                     onClose={onEmojiPickerClose}
                     anchorOrigin={{ vertical: "top", horizontal: "right" }}
                     transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+                    slotProps={{
+                        paper: {
+                            sx: {
+                                bgcolor: "background.paper",
+                                border: "1px solid",
+                                borderColor: "divider",
+                                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+                            },
+                        },
+                    }}
                 >
                     <EmojiPicker
                         emojiStyle={EmojiStyle.NATIVE}
                         width={350}
                         height={400}
                         onEmojiClick={onEmojiClick}
+                        theme={Theme.DARK}
                     />
                 </Popover>
                 <IconButton
                     onClick={onSendMessage}
                     disabled={(!newMessage.trim() && files.length === 0) || !isConnected}
                     sx={{
-                        color: "#1976d2",
+                        color: "primary.main",
                         "&:disabled": {
-                            color: "#2456a6",
+                            color: "text.disabled",
+                        },
+                        "&:hover:not(:disabled)": {
+                            backgroundColor: "action.hover",
+                            color: "primary.light",
                         },
                     }}
                 >

@@ -53,7 +53,9 @@ export const ImageViewer = ({
           `,
                     gridTemplateColumns: "auto 1fr auto",
                     gridTemplateRows: "auto 1fr auto",
-                    backgroundColor: "rgba(0, 0, 0, 0.8)",
+                    backgroundColor: "background.default",
+                    border: "1px solid",
+                    borderColor: "divider",
                 }}
             >
                 {/* Header */}
@@ -67,16 +69,37 @@ export const ImageViewer = ({
                         justifyContent: "space-between",
                         px: 2,
                         borderRadius: "8px 8px 0 0",
+                        borderBottom: "1px solid",
+                        borderColor: "divider",
                     }}
                 >
-                    <Typography variant="h6" color="white">
+                    <Typography variant="h6" color="text.primary">
                         {currentIndex + 1} of {media.length}
                     </Typography>
                     <Box>
-                        <IconButton onClick={handleDownload} sx={{ color: "white", mr: 1 }}>
+                        <IconButton
+                            onClick={handleDownload}
+                            sx={{
+                                color: "text.primary",
+                                mr: 1,
+                                "&:hover": {
+                                    backgroundColor: "action.hover",
+                                    color: "primary.main",
+                                },
+                            }}
+                        >
                             <Download />
                         </IconButton>
-                        <IconButton onClick={onClose} sx={{ color: "white" }}>
+                        <IconButton
+                            onClick={onClose}
+                            sx={{
+                                color: "text.primary",
+                                "&:hover": {
+                                    backgroundColor: "action.hover",
+                                    color: "error.main",
+                                },
+                            }}
+                        >
                             <Close />
                         </IconButton>
                     </Box>
@@ -88,9 +111,14 @@ export const ImageViewer = ({
                     sx={{
                         gridArea: "nav-left",
                         alignSelf: "center",
-                        color: "white",
-                        bgcolor: "rgba(255, 255, 255, 0.2)",
-                        "&:hover": { bgcolor: "rgba(255, 255, 255, 0.3)" },
+                        color: "text.primary",
+                        bgcolor: "rgba(59, 130, 246, 0.1)",
+                        border: "1px solid",
+                        borderColor: "divider",
+                        "&:hover": {
+                            bgcolor: "rgba(59, 130, 246, 0.2)",
+                            borderColor: "primary.main",
+                        },
                         ml: 2,
                     }}
                 >
@@ -107,6 +135,7 @@ export const ImageViewer = ({
                         minHeight: "300px",
                         maxHeight: "calc(90vh - 144px)", // Accounts for header + thumbnails
                         overflow: "hidden",
+                        backgroundColor: "background.default",
                     }}
                 >
                     <img
@@ -116,6 +145,7 @@ export const ImageViewer = ({
                             maxWidth: "100%",
                             maxHeight: "100%",
                             objectFit: "contain",
+                            borderRadius: "8px",
                         }}
                     />
                 </Box>
@@ -126,9 +156,14 @@ export const ImageViewer = ({
                     sx={{
                         gridArea: "nav-right",
                         alignSelf: "center",
-                        color: "white",
-                        bgcolor: "rgba(255, 255, 255, 0.2)",
-                        "&:hover": { bgcolor: "rgba(255, 255, 255, 0.3)" },
+                        color: "text.primary",
+                        bgcolor: "rgba(59, 130, 246, 0.1)",
+                        border: "1px solid",
+                        borderColor: "divider",
+                        "&:hover": {
+                            bgcolor: "rgba(59, 130, 246, 0.2)",
+                            borderColor: "primary.main",
+                        },
                         mr: 2,
                     }}
                 >
@@ -142,9 +177,12 @@ export const ImageViewer = ({
                         overflowX: "auto",
                         whiteSpace: "nowrap",
                         padding: "10px 0",
-                        backgroundColor: "rgba(0, 0, 0, 0.8)",
+                        backgroundColor: "background.paper",
                         display: "flex",
                         justifyContent: "center",
+                        borderTop: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: "0 0 8px 8px",
                     }}
                 >
                     {media.map((mediaItem, index) => (
@@ -162,12 +200,17 @@ export const ImageViewer = ({
                                 cursor: "pointer",
                                 opacity: index === currentIndex ? 1 : 0.6,
                                 border:
-                                    index === currentIndex
-                                        ? "2px solid white"
-                                        : "2px solid transparent",
+                                    index === currentIndex ? "2px solid" : "2px solid transparent",
+                                borderColor:
+                                    index === currentIndex ? "primary.main" : "transparent",
                                 transition: "opacity 0.2s ease, border-color 0.2s ease",
                                 marginRight: "5px",
                                 "&:last-child": { marginRight: 0 },
+                                "&:hover": {
+                                    opacity: 1,
+                                    borderColor:
+                                        index === currentIndex ? "primary.light" : "primary.main",
+                                },
                             }}
                         />
                     ))}

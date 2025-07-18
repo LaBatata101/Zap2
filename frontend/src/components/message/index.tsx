@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
 import { formatTime } from "../../helpers/format";
 import * as types from "../../api/types";
-import { Box, Stack, Avatar, Typography } from "@mui/material";
+import { Box, Stack, Avatar, Typography, useTheme } from "@mui/material";
 import { Reply } from "@mui/icons-material";
 import { MediaGrid } from "./media_grid";
 import { ImageViewer } from "./image_viewer";
@@ -29,6 +29,7 @@ export const Message = memo(
         onReplyClick,
         isHighlighted,
     }: MessageProps) => {
+        const theme = useTheme();
         const isOwnMessage = message.user.id === currentUser.id;
         const showAvatar = !isOwnMessage && (sequenceType === "single" || sequenceType === "last");
         const showUsername =
@@ -98,10 +99,11 @@ export const Message = memo(
                 justifyContent={isOwnMessage ? "flex-end" : "flex-start"}
                 alignItems={showAvatar ? "flex-end" : "flex-start"}
                 sx={{
-                    transition: "background-color 0.5s ease",
-                    backgroundColor: isHighlighted ? "rgba(25, 118, 210, 0.1)" : "transparent",
+                    transition: "background-color 0.3s ease",
+                    backgroundColor: isHighlighted ? "action.hover" : "transparent",
                     borderRadius: 2,
                     py: isHighlighted ? 1 : 0,
+                    px: isHighlighted ? 1 : 0,
                     my: 0.5,
                 }}
             >
@@ -117,10 +119,13 @@ export const Message = memo(
                     {showAvatar && (
                         <Avatar
                             sx={{
-                                bgcolor: "primary.main",
+                                background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
                                 width: avatarSize,
                                 height: avatarSize,
                                 flexShrink: 0,
+                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                                fontWeight: 600,
+                                fontSize: "0.875rem",
                             }}
                         >
                             {message.user.username.charAt(0).toUpperCase()}
@@ -141,7 +146,7 @@ export const Message = memo(
                                     sx={{
                                         p: 1.5,
                                         mb: 1,
-                                        bgcolor: isOwnMessage ? "primary.dark" : "grey.300",
+                                        bgcolor: isOwnMessage ? "primary.dark" : "surface.main",
                                         borderRadius: "8px",
                                         borderLeft: 3,
                                         borderColor: isOwnMessage
@@ -159,8 +164,10 @@ export const Message = memo(
                                         position: "relative",
                                         overflow: "hidden",
                                         cursor: "pointer",
+                                        transition: "all 0.2s ease",
                                         "&:hover": {
-                                            bgcolor: isOwnMessage ? "primary.dark" : "grey.400",
+                                            bgcolor: isOwnMessage ? "primary.dark" : "action.hover",
+                                            transform: "translateY(-1px)",
                                         },
                                     }}
                                 >
@@ -217,7 +224,7 @@ export const Message = memo(
                                     py: hasMedia && !hasContent ? 0.5 : 1,
                                     borderRadius: getBorderRadius(),
                                     color: isOwnMessage ? "common.white" : "text.primary",
-                                    bgcolor: isOwnMessage ? "primary.main" : "grey.200",
+                                    bgcolor: isOwnMessage ? "primary.main" : "background.paper",
                                     width: needsPadding
                                         ? `calc(100% - ${avatarSize + 8}px)`
                                         : undefined,
@@ -225,6 +232,19 @@ export const Message = memo(
                                     wordBreak: "break-word",
                                     overflowWrap: "break-word",
                                     minWidth: hasMedia && !hasContent ? "auto" : "120px",
+                                    boxShadow: isOwnMessage
+                                        ? "0 2px 8px rgba(59, 130, 246, 0.2)"
+                                        : "0 2px 8px rgba(0, 0, 0, 0.1)",
+                                    border: isOwnMessage
+                                        ? "none"
+                                        : `1px solid ${theme.palette.divider}`,
+                                    transition: "all 0.2s ease",
+                                    "&:hover": {
+                                        transform: "translateY(-1px)",
+                                        boxShadow: isOwnMessage
+                                            ? "0 4px 16px rgba(59, 130, 246, 0.3)"
+                                            : "0 4px 16px rgba(0, 0, 0, 0.15)",
+                                    },
                                 }}
                             >
                                 {/* Username header inside bubble for other users */}
@@ -234,7 +254,7 @@ export const Message = memo(
                                             display: "flex",
                                             justifyContent: "flex-start",
                                             mb: 0.5,
-                                            borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+                                            borderBottom: `1px solid ${theme.palette.divider}`,
                                             pb: 0.5,
                                             mx: hasMedia && !hasContent ? 1.5 : 0,
                                         }}
@@ -275,6 +295,8 @@ export const Message = memo(
                                                 whiteSpace: "pre-wrap",
                                                 wordBreak: "break-word",
                                                 overflowWrap: "break-word",
+                                                lineHeight: 1.5,
+                                                fontSize: "0.95rem",
                                             }}
                                         >
                                             {displayContent}
@@ -295,7 +317,7 @@ export const Message = memo(
                                         <Typography
                                             variant="caption"
                                             onClick={() => setIsExpanded(!isExpanded)}
-                                            fontWeight="bold"
+                                            fontWeight="600"
                                             sx={{
                                                 fontSize: "0.85rem",
                                                 color: isOwnMessage
@@ -303,6 +325,7 @@ export const Message = memo(
                                                     : "primary.main",
                                                 cursor: "pointer",
                                                 textDecoration: "underline",
+                                                transition: "opacity 0.2s ease",
                                                 "&:hover": {
                                                     opacity: 0.8,
                                                 },
@@ -319,6 +342,7 @@ export const Message = memo(
                                         display: "flex",
                                         justifyContent: "flex-end",
                                         px: hasMedia && !hasContent ? 1.5 : 0,
+                                        mt: hasContent || hasMedia ? 0.5 : 0,
                                     }}
                                 >
                                     <Typography
@@ -331,6 +355,7 @@ export const Message = memo(
                                         sx={{
                                             fontSize: "0.7rem",
                                             opacity: 0.8,
+                                            fontWeight: 500,
                                         }}
                                     >
                                         {formatTime(message.timestamp)}

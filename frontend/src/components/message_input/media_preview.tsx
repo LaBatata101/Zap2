@@ -57,10 +57,10 @@ export const MediaPreview = ({
                 sx={{
                     mb: 2,
                     p: 2,
-                    bgcolor: "grey.50",
+                    bgcolor: "background.paper",
                     borderRadius: 2,
                     border: "1px dashed",
-                    borderColor: "grey.300",
+                    borderColor: "divider",
                 }}
             >
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -74,8 +74,12 @@ export const MediaPreview = ({
                         sx={{
                             mb: 2,
                             fontSize: "0.875rem",
+                            bgcolor: "rgba(245, 158, 11, 0.1)",
+                            color: "warning.main",
+                            border: "1px solid rgba(245, 158, 11, 0.3)",
                             "& .MuiAlert-icon": {
                                 fontSize: "1.2rem",
+                                color: "warning.main",
                             },
                         }}
                     >
@@ -114,10 +118,14 @@ export const MediaPreview = ({
                                     cursor: isOversized ? "not-allowed" : "grab",
                                     transition: "all 0.2s ease",
                                     border: isOversized ? "2px solid" : "1px solid",
-                                    borderColor: isOversized ? "error.main" : "grey.300",
+                                    borderColor: isOversized ? "error.main" : "divider",
+                                    bgcolor: "surface.main",
                                     "&:hover": {
                                         transform: isOversized ? "none" : "scale(1.02)",
-                                        boxShadow: isOversized ? 0 : 3,
+                                        boxShadow: isOversized
+                                            ? "0 4px 12px rgba(239, 68, 68, 0.3)"
+                                            : "0 4px 12px rgba(59, 130, 246, 0.3)",
+                                        borderColor: isOversized ? "error.main" : "primary.main",
                                         "& .file-info-overlay": {
                                             opacity: 1,
                                         },
@@ -151,7 +159,7 @@ export const MediaPreview = ({
                                             left: 0,
                                             right: 0,
                                             bottom: 0,
-                                            bgcolor: "rgba(255, 255, 255, 0.5)",
+                                            bgcolor: "rgba(15, 23, 42, 0.7)",
                                             display: "flex",
                                             alignItems: "center",
                                             justifyContent: "center",
@@ -170,7 +178,7 @@ export const MediaPreview = ({
                                                 textAlign: "center",
                                                 px: 1,
                                                 fontSize: "0.75rem",
-                                                textShadow: "0 0 2px rgba(255,255,255,0.8)",
+                                                textShadow: "0 0 2px rgba(15, 23, 42, 0.8)",
                                             }}
                                         >
                                             File too large
@@ -187,9 +195,9 @@ export const MediaPreview = ({
                                         left: 0,
                                         right: 0,
                                         bgcolor: isOversized
-                                            ? "rgba(211, 47, 47, 0.8)"
-                                            : "rgba(0, 0, 0, 0.6)",
-                                        color: "white",
+                                            ? "rgba(239, 68, 68, 0.9)"
+                                            : "rgba(15, 23, 42, 0.8)",
+                                        color: "text.primary",
                                         p: 0.5,
                                         display: "flex",
                                         alignItems: "center",
@@ -227,12 +235,12 @@ export const MediaPreview = ({
                                                     }
                                                     disabled={isOversized}
                                                     sx={{
-                                                        color: "white",
+                                                        color: "text.primary",
                                                         p: 0.25,
                                                         "&:hover": {
                                                             bgcolor: isOversized
                                                                 ? "transparent"
-                                                                : "rgba(255, 255, 255, 0.2)",
+                                                                : "rgba(59, 130, 246, 0.3)",
                                                         },
                                                         "&:disabled": {
                                                             color: "rgba(255, 255, 255, 0.5)",
@@ -249,10 +257,10 @@ export const MediaPreview = ({
                                                 size="small"
                                                 onClick={() => onRemoveFile(file)}
                                                 sx={{
-                                                    color: "white",
+                                                    color: "text.primary",
                                                     p: 0.25,
                                                     "&:hover": {
-                                                        bgcolor: "rgba(255, 0, 0, 0.3)",
+                                                        bgcolor: "rgba(239, 68, 68, 0.3)",
                                                     },
                                                 }}
                                             >
@@ -268,12 +276,17 @@ export const MediaPreview = ({
                                         position: "absolute",
                                         bottom: 4,
                                         right: 4,
-                                        bgcolor: isOversized ? "error.main" : "rgba(0, 0, 0, 0.7)",
-                                        color: "white",
+                                        bgcolor: isOversized
+                                            ? "error.main"
+                                            : "rgba(15, 23, 42, 0.8)",
+                                        color: "text.primary",
                                         borderRadius: "4px",
                                         px: 0.5,
                                         py: 0.25,
                                         fontWeight: isOversized ? "bold" : "normal",
+                                        border: isOversized
+                                            ? "none"
+                                            : "1px solid rgba(59, 130, 246, 0.3)",
                                     }}
                                 >
                                     <Typography variant="caption" sx={{ fontSize: "0.6rem" }}>
@@ -287,16 +300,21 @@ export const MediaPreview = ({
                                         position: "absolute",
                                         bottom: 4,
                                         left: 4,
-                                        bgcolor: isOversized ? "error.main" : "rgba(0, 0, 0, 0.7)",
+                                        bgcolor: isOversized
+                                            ? "error.main"
+                                            : "rgba(15, 23, 42, 0.8)",
                                         borderRadius: "50%",
                                         p: 0.25,
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center",
+                                        border: isOversized
+                                            ? "none"
+                                            : "1px solid rgba(59, 130, 246, 0.3)",
                                     }}
                                 >
                                     {isImage(file) && (
-                                        <ImageIcon sx={{ fontSize: 12, color: "white" }} />
+                                        <ImageIcon sx={{ fontSize: 12, color: "text.primary" }} />
                                     )}
                                 </Box>
 
@@ -309,7 +327,7 @@ export const MediaPreview = ({
                                             left: 0,
                                             right: 0,
                                             bgcolor: "error.main",
-                                            color: "white",
+                                            color: "text.primary",
                                             p: 0.5,
                                             textAlign: "center",
                                         }}

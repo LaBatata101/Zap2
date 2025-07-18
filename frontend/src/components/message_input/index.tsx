@@ -127,7 +127,7 @@ export const MessageInput = ({
                 p: 2,
                 borderTop: 1,
                 borderColor: "divider",
-                background: "#ffffff",
+                backgroundColor: "background.paper",
                 position: "relative",
             }}
             onDragEnter={handleDragEnter}
@@ -144,7 +144,7 @@ export const MessageInput = ({
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        bgcolor: "rgba(25, 118, 210, 0.3)",
+                        bgcolor: "rgba(59, 130, 246, 0.15)",
                         border: "2px dashed",
                         borderColor: "primary.main",
                         borderRadius: 2,
@@ -166,7 +166,7 @@ export const MessageInput = ({
                     sx={{
                         p: 1.5,
                         mb: 1,
-                        bgcolor: "grey.100",
+                        bgcolor: "rgba(59, 130, 246, 0.1)",
                         borderRadius: 1,
                         borderLeft: 3,
                         borderColor: "primary.main",
@@ -183,7 +183,17 @@ export const MessageInput = ({
                             {replyingTo.content}
                         </Typography>
                     </Box>
-                    <IconButton size="small" onClick={onCancelReply}>
+                    <IconButton
+                        size="small"
+                        onClick={onCancelReply}
+                        sx={{
+                            color: "text.secondary",
+                            "&:hover": {
+                                color: "error.main",
+                                backgroundColor: "action.hover",
+                            },
+                        }}
+                    >
                         <Close fontSize="small" />
                     </IconButton>
                 </Box>
@@ -231,6 +241,12 @@ export const MessageInput = ({
                         input: {
                             sx: {
                                 borderRadius: "40px",
+                                backgroundColor: "background.default",
+                                color: "text.primary",
+                                "& .MuiInputBase-input::placeholder": {
+                                    color: "text.secondary",
+                                    opacity: 0.7,
+                                },
                             },
                         },
                     }}

@@ -115,7 +115,7 @@ export const MessageList = memo(
             <Box
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
-                sx={{ flex: 1, overflowY: "auto", p: 2, bgcolor: "grey.100" }}
+                sx={{ flex: 1, overflowY: "auto", p: 2, bgcolor: "background.default" }}
             >
                 {messages.map((message, index) => {
                     const isFirstUnread = firstUnreadIndex !== null && index === firstUnreadIndex;
@@ -149,7 +149,19 @@ export const MessageList = memo(
                         <div key={message.id} id={`message-${message.id}`}>
                             {showDate && (
                                 <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
-                                    <Chip label={formatDate(message.timestamp)} />
+                                    <Chip
+                                        label={formatDate(message.timestamp)}
+                                        sx={{
+                                            bgcolor: "surface.main",
+                                            color: "text.secondary",
+                                            fontWeight: 500,
+                                            fontSize: "0.75rem",
+                                            height: 28,
+                                            "& .MuiChip-label": {
+                                                px: 1.5,
+                                            },
+                                        }}
+                                    />
                                 </Box>
                             )}
                             {isFirstUnread && (
@@ -157,7 +169,20 @@ export const MessageList = memo(
                                     ref={isFirstUnread ? firstUnreadRef : null}
                                     sx={{ display: "flex", justifyContent: "center", my: 2 }}
                                 >
-                                    <Chip label={`Unread messages: ${unreadCount}`} />
+                                    <Chip
+                                        label={`Unread messages: ${unreadCount}`}
+                                        sx={{
+                                            bgcolor: "primary.main",
+                                            color: "primary.contrastText",
+                                            fontWeight: 600,
+                                            fontSize: "0.75rem",
+                                            height: 28,
+                                            boxShadow: "0 2px 8px rgba(59, 130, 246, 0.3)",
+                                            "& .MuiChip-label": {
+                                                px: 1.5,
+                                            },
+                                        }}
+                                    />
                                 </Box>
                             )}
                             <Message
@@ -184,6 +209,10 @@ export const MessageList = memo(
                             bottom: 80,
                             right: 16,
                             zIndex: 1000,
+                            boxShadow: "0 4px 16px rgba(59, 130, 246, 0.3)",
+                            "&:hover": {
+                                boxShadow: "0 6px 20px rgba(59, 130, 246, 0.4)",
+                            },
                         }}
                         aria-label="scroll to bottom"
                     >
@@ -199,18 +228,43 @@ export const MessageList = memo(
                             ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
                             : undefined
                     }
+                    sx={{
+                        "& .MuiPaper-root": {
+                            bgcolor: "background.paper",
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 2,
+                            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+                            backdropFilter: "blur(8px)",
+                            minWidth: 160,
+                        },
+                    }}
                 >
-                    <MenuItem onClick={handleReply}>
-                        <ListItemIcon>
+                    <MenuItem
+                        onClick={handleReply}
+                        sx={{
+                            "&:hover": {
+                                bgcolor: "action.hover",
+                            },
+                        }}
+                    >
+                        <ListItemIcon sx={{ color: "text.secondary" }}>
                             <Reply fontSize="small" />
                         </ListItemIcon>
-                        <ListItemText>Reply</ListItemText>
+                        <ListItemText sx={{ color: "text.primary" }}>Reply</ListItemText>
                     </MenuItem>
-                    <MenuItem onClick={handleCopyText}>
-                        <ListItemIcon>
+                    <MenuItem
+                        onClick={handleCopyText}
+                        sx={{
+                            "&:hover": {
+                                bgcolor: "action.hover",
+                            },
+                        }}
+                    >
+                        <ListItemIcon sx={{ color: "text.secondary" }}>
                             <ContentCopy fontSize="small" />
                         </ListItemIcon>
-                        <ListItemText>Copy Text</ListItemText>
+                        <ListItemText sx={{ color: "text.primary" }}>Copy Text</ListItemText>
                     </MenuItem>
                 </Menu>
             </Box>

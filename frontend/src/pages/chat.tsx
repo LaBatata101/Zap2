@@ -11,7 +11,8 @@ import {
     RegistrationCredentials,
     User,
 } from "../api/types";
-import { Box, useMediaQuery, useTheme } from "@mui/material";
+import { Box, ThemeProvider, useMediaQuery, useTheme } from "@mui/material";
+import { darkTheme } from "../theme";
 
 enum ChatActionType {
     RegistrationStart,
@@ -50,16 +51,16 @@ type ChatState = {
 
 type ChatAction =
     | {
-        type:
-        | ChatActionType.LoginStart
-        | ChatActionType.RegistrationStart
-        | ChatActionType.Logout
-        | ChatActionType.Error;
-    }
+          type:
+              | ChatActionType.LoginStart
+              | ChatActionType.RegistrationStart
+              | ChatActionType.Logout
+              | ChatActionType.Error;
+      }
     | {
-        type: ChatActionType.LoginSuccess | ChatActionType.RegistrationSuccess;
-        payload: { user: User };
-    }
+          type: ChatActionType.LoginSuccess | ChatActionType.RegistrationSuccess;
+          payload: { user: User };
+      }
     | { type: ChatActionType.SelectRoom; payload: ChatRoom }
     | { type: ChatActionType.SetMessages; payload: Message[] }
     | { type: ChatActionType.SetRooms; payload: ChatRoom[] }
@@ -75,7 +76,7 @@ const initialState: ChatState = {
     rooms: [],
     currentRoom: undefined,
     messages: [],
-    connectionStatus: ConnectionStatus.Disconnected,
+    connectionStatus: ConnectionStatus.Connected,
     searchTerm: "",
     highlightedMessageId: undefined,
 };
@@ -112,14 +113,14 @@ function chatReducer(state: ChatState, action: ChatAction) {
             const updatedRooms = rooms.map((room) =>
                 room.id === message.room
                     ? {
-                        ...room,
-                        last_message: message.content,
-                        last_message_timestamp: message.timestamp,
-                        unread_count:
-                            currentRoom?.id === message.room
-                                ? room.unread_count
-                                : room.unread_count + 1,
-                    }
+                          ...room,
+                          last_message: message.content,
+                          last_message_timestamp: message.timestamp,
+                          unread_count:
+                              currentRoom?.id === message.room
+                                  ? room.unread_count
+                                  : room.unread_count + 1,
+                      }
                     : room,
             );
 
@@ -373,50 +374,52 @@ export const ChatApp = () => {
     }
 
     return (
-        <Box sx={{ display: "flex", height: "100vh" }}>
-            <Sidebar
-                user={user}
-                rooms={rooms}
-                currentRoom={currentRoom!}
-                onRoomSelect={handleRoomSelect}
-                onCreateRoom={handleCreateRoom}
-                onLogout={handleLogout}
-                searchTerm={searchTerm}
-                setSearchTerm={(term: string) =>
-                    dispatch({ type: ChatActionType.SetSearchTerm, payload: term })
-                }
-                isMobile={isMobile}
-                isOpen={isSidebarOpen}
-                onToggle={handleSidebarToggle}
-            />
-            <Box
-                component="main"
-                sx={{
-                    height: "100%",
-                    width: {
-                        xs: "100%",
-                        md: `calc(100% - ${sidebarWidth}px)`,
-                    },
-                    marginLeft: {
-                        xs: 0,
-                        md: `${sidebarWidth}px`,
-                    },
-                }}
-            >
-                <ChatArea
-                    currentRoom={currentRoom}
-                    messages={messages}
+        <ThemeProvider theme={darkTheme}>
+            <Box sx={{ display: "flex", height: "100vh", bgcolor: "background.default" }}>
+                <Sidebar
                     user={user}
-                    onSendMessage={handleSendMessage}
-                    connectionStatus={connectionStatus}
-                    replyingTo={replyingTo}
-                    onSetReply={setReplyingTo}
-                    onCancelReply={handleCancelReply}
-                    onMenuClick={handleSidebarToggle}
-                    onReplyClick={handleReplyClick}
-                    highlightedMessageId={highlightedMessageId}
+                    rooms={rooms}
+                    currentRoom={currentRoom!}
+                    onRoomSelect={handleRoomSelect}
+                    onCreateRoom={handleCreateRoom}
+                    onLogout={handleLogout}
+                    searchTerm={searchTerm}
+                    setSearchTerm={(term: string) =>
+                        dispatch({ type: ChatActionType.SetSearchTerm, payload: term })
+                    }
+                    isMobile={isMobile}
+                    isOpen={isSidebarOpen}
+                    onToggle={handleSidebarToggle}
                 />
+                <Box
+                    component="main"
+                    sx={{
+                        height: "100%",
+                        width: {
+                            xs: "100%",
+                            md: `calc(100% - ${sidebarWidth}px)`,
+                        },
+                        marginLeft: {
+                            xs: 0,
+                            md: `${sidebarWidth}px`,
+                        },
+                    }}
+                >
+                    <ChatArea
+                        currentRoom={currentRoom}
+                        messages={messages}
+                        user={user}
+                        onSendMessage={handleSendMessage}
+                        connectionStatus={connectionStatus}
+                        replyingTo={replyingTo}
+                        onSetReply={setReplyingTo}
+                        onCancelReply={handleCancelReply}
+                        onMenuClick={handleSidebarToggle}
+                        onReplyClick={handleReplyClick}
+                        highlightedMessageId={highlightedMessageId}
+                    />
+                </Box>
             </Box>
-        </Box>
+        </ThemeProvider>
     );
 };

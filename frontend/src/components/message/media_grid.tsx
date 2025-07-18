@@ -23,6 +23,11 @@ export const MediaGrid = ({
                     overflow: "hidden",
                     borderRadius: 2,
                     position: "relative",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.3)",
+                    },
                 }}
             >
                 <Box
@@ -56,6 +61,11 @@ export const MediaGrid = ({
                     maxWidth: "400px",
                     overflow: "hidden",
                     borderRadius: 2,
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.3)",
+                    },
                 }}
             >
                 <Box
@@ -101,6 +111,11 @@ export const MediaGrid = ({
                     maxWidth: "400px",
                     overflow: "hidden",
                     borderRadius: 2,
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.3)",
+                    },
                 }}
             >
                 <Box
@@ -166,6 +181,11 @@ export const MediaGrid = ({
                 maxWidth: "400px",
                 overflow: "hidden",
                 borderRadius: 2,
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.3)",
+                },
             }}
         >
             <Box
