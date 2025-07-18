@@ -335,7 +335,7 @@ export const ChatApp = () => {
             };
 
             if (replyingTo) {
-                messagePayload.reply_to = replyingTo.id;
+                messagePayload.reply_to_id = replyingTo.id;
             }
             if (files.length > 0) {
                 const uploadedMedia = await Promise.all(

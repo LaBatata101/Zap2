@@ -22,7 +22,7 @@ export type Message = {
 export type MessagePayload = {
     room: number;
     content: string;
-    reply_to?: number;
+    reply_to_id?: number;
     media_ids: number[];
 };
 
