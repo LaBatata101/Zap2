@@ -17,6 +17,7 @@ import {
     Snackbar,
     Box,
     ToggleButtonGroup,
+    Fade,
 } from "@mui/material";
 import {
     PersonOutline,
@@ -27,7 +28,7 @@ import {
     MailOutline,
 } from "@mui/icons-material";
 import { styled, ThemeProvider } from "@mui/material/styles";
-import { useFormik } from "formik";
+import { FormikProps, useFormik } from "formik";
 import { APIService } from "../api";
 import { darkTheme } from "../theme";
 
@@ -90,6 +91,11 @@ const BrandIcon = styled(Avatar)({
     boxShadow: "0 8px 32px rgba(59, 130, 246, 0.3)",
 });
 
+const FormContainer = styled(Box)({
+    position: "relative",
+    minHeight: "300px",
+});
+
 const registrationScheme = yup.object().shape({
     username: yup
         .string()
@@ -110,6 +116,201 @@ enum AuthMode {
     register,
 }
 
+const LoginForm = ({
+    loginForm,
+    showPassword,
+    setShowPassword,
+    loading,
+}: {
+    loginForm: FormikProps<LoginCredentials>;
+    showPassword: boolean;
+    setShowPassword: (value: boolean) => void;
+    loading: boolean;
+}) => (
+    <form onSubmit={loginForm.handleSubmit} noValidate>
+        <Stack spacing={2}>
+            <TextField
+                id="username"
+                name="username"
+                label="Username"
+                value={loginForm.values.username}
+                onChange={loginForm.handleChange}
+                onBlur={loginForm.handleBlur}
+                error={loginForm.touched.username && Boolean(loginForm.errors.username)}
+                helperText={loginForm.touched.username && loginForm.errors.username}
+                fullWidth
+                slotProps={{
+                    input: {
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <PersonOutline />
+                            </InputAdornment>
+                        ),
+                    },
+                }}
+            />
+
+            <TextField
+                id="password"
+                name="password"
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                value={loginForm.values.password}
+                onChange={loginForm.handleChange}
+                onBlur={loginForm.handleBlur}
+                error={loginForm.touched.password && Boolean(loginForm.errors.password)}
+                helperText={loginForm.touched.password && loginForm.errors.password}
+                fullWidth
+                slotProps={{
+                    input: {
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <LockOutlined />
+                            </InputAdornment>
+                        ),
+                        endAdornment: (
+                            <InputAdornment position="end">
+                                <IconButton
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    edge="end"
+                                >
+                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                </IconButton>
+                            </InputAdornment>
+                        ),
+                    },
+                }}
+            />
+
+            <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ flexWrap: "wrap", gap: 1 }}
+            >
+                <FormControlLabel control={<Checkbox name="remember" />} label="Remember me" />
+                <Button variant="text" size="small">
+                    Forgot password?
+                </Button>
+            </Stack>
+
+            <Button type="submit" variant="contained" size="large" fullWidth disabled={loading}>
+                {loading ? "Please wait..." : "Sign in"}
+            </Button>
+        </Stack>
+    </form>
+);
+
+const RegistrationForm = ({
+    registrationForm,
+    showPassword,
+    setShowPassword,
+    loading,
+    usernameExists,
+    checkUsernameExists,
+}: {
+    registrationForm: FormikProps<RegistrationCredentials>;
+    showPassword: boolean;
+    setShowPassword: (value: boolean) => void;
+    loading: boolean;
+    usernameExists: boolean;
+    checkUsernameExists: (username: string) => void;
+}) => (
+    <form onSubmit={registrationForm.handleSubmit} noValidate>
+        <Stack spacing={2}>
+            <TextField
+                id="username"
+                name="username"
+                label="Username"
+                value={registrationForm.values.username}
+                onChange={(e) => {
+                    registrationForm.handleChange(e);
+                    checkUsernameExists(e.target.value);
+                }}
+                onBlur={registrationForm.handleBlur}
+                error={
+                    (registrationForm.touched.username &&
+                        Boolean(registrationForm.errors.username)) ||
+                    usernameExists
+                }
+                helperText={
+                    (registrationForm.touched.username && registrationForm.errors.username) ||
+                    (usernameExists ? "The username already exists" : "")
+                }
+                fullWidth
+                slotProps={{
+                    input: {
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <PersonOutline />
+                            </InputAdornment>
+                        ),
+                    },
+                }}
+            />
+
+            <TextField
+                fullWidth
+                id="email"
+                name="email"
+                label="Email"
+                value={registrationForm.values.email}
+                onChange={registrationForm.handleChange}
+                onBlur={registrationForm.handleBlur}
+                error={registrationForm.touched.email && Boolean(registrationForm.errors.email)}
+                helperText={registrationForm.touched.email && registrationForm.errors.email}
+                slotProps={{
+                    input: {
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <MailOutline />
+                            </InputAdornment>
+                        ),
+                    },
+                }}
+            />
+
+            <TextField
+                id="password"
+                name="password"
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                value={registrationForm.values.password}
+                onChange={registrationForm.handleChange}
+                onBlur={registrationForm.handleBlur}
+                error={
+                    registrationForm.touched.password && Boolean(registrationForm.errors.password)
+                }
+                helperText={registrationForm.touched.password && registrationForm.errors.password}
+                fullWidth
+                slotProps={{
+                    input: {
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <LockOutlined />
+                            </InputAdornment>
+                        ),
+                        endAdornment: (
+                            <InputAdornment position="end">
+                                <IconButton
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    edge="end"
+                                >
+                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                </IconButton>
+                            </InputAdornment>
+                        ),
+                    },
+                }}
+            />
+
+            <Button type="submit" variant="contained" size="large" fullWidth disabled={loading}>
+                {loading ? "Please wait..." : "Sign up"}
+            </Button>
+        </Stack>
+    </form>
+);
+
 export const AuthPage = ({
     apiService,
     onLogin,
@@ -129,6 +330,8 @@ export const AuthPage = ({
     });
     const [usernameExists, setUsernameExists] = useState(false);
     const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
+
+    const [isTransitioning, setIsTransitioning] = useState(false);
 
     const checkUsernameExists = async (username: string) => {
         if (usernameTimer) {
@@ -225,10 +428,18 @@ export const AuthPage = ({
     });
 
     const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: AuthMode | null) => {
-        if (newMode !== null) {
-            setAuthMode(newMode);
-            registrationForm.resetForm();
-            loginForm.resetForm();
+        if (newMode !== null && newMode !== authMode) {
+            setIsTransitioning(true);
+
+            // Start the fade out, then switch mode and fade in
+            setTimeout(() => {
+                setAuthMode(newMode);
+                registrationForm.resetForm();
+                loginForm.resetForm();
+                setUsernameExists(false);
+                setShowPassword(false);
+                setIsTransitioning(false);
+            }, 150); // Half of the transition duration
         }
     };
 
@@ -272,6 +483,7 @@ export const AuthPage = ({
                                     border: 0,
                                     borderRadius: "8px !important",
                                     color: "text.secondary",
+                                    transition: "all 0.3s ease-in-out",
                                     "&.Mui-selected": {
                                         bgcolor: "rgba(59, 130, 246, 0.2)",
                                         color: "primary.main",
@@ -290,6 +502,7 @@ export const AuthPage = ({
                                     border: 0,
                                     borderRadius: "8px !important",
                                     color: "text.secondary",
+                                    transition: "all 0.3s ease-in-out",
                                     "&.Mui-selected": {
                                         bgcolor: "rgba(59, 130, 246, 0.2)",
                                         color: "primary.main",
@@ -305,181 +518,35 @@ export const AuthPage = ({
                         </ToggleButtonGroup>
                     </Box>
 
-                    <form
-                        onSubmit={
-                            authMode === AuthMode.login
-                                ? loginForm.handleSubmit
-                                : registrationForm.handleSubmit
-                        }
-                        noValidate
-                    >
-                        <Stack spacing={2}>
-                            <TextField
-                                id="username"
-                                name="username"
-                                label="Username"
-                                value={
-                                    authMode === AuthMode.login
-                                        ? loginForm.values.username
-                                        : registrationForm.values.username
-                                }
-                                onChange={
-                                    authMode === AuthMode.login
-                                        ? loginForm.handleChange
-                                        : (e) => {
-                                              registrationForm.handleChange(e);
-                                              checkUsernameExists(e.target.value);
-                                          }
-                                }
-                                onBlur={
-                                    authMode === AuthMode.login
-                                        ? loginForm.handleBlur
-                                        : registrationForm.handleBlur
-                                }
-                                error={
-                                    (loginForm.touched.username &&
-                                        Boolean(loginForm.errors.username)) ||
-                                    (registrationForm.touched.username &&
-                                        Boolean(registrationForm.errors.username)) ||
-                                    (authMode === AuthMode.register && usernameExists)
-                                }
-                                helperText={
-                                    (loginForm.touched.username && loginForm.errors.username) ||
-                                    (registrationForm.touched.username &&
-                                        registrationForm.errors.username) ||
-                                    (authMode === AuthMode.register && usernameExists
-                                        ? "The username already exists"
-                                        : "")
-                                }
-                                fullWidth
-                                slotProps={{
-                                    input: {
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <PersonOutline />
-                                            </InputAdornment>
-                                        ),
-                                    },
-                                }}
-                            />
-
-                            {/* E-mail field (only in register mode) */}
-                            {authMode === AuthMode.register && (
-                                <TextField
-                                    fullWidth
-                                    id="email"
-                                    name="email"
-                                    label="Email"
-                                    value={registrationForm.values.email}
-                                    onChange={registrationForm.handleChange}
-                                    onBlur={registrationForm.handleBlur}
-                                    error={
-                                        registrationForm.touched.email &&
-                                        Boolean(registrationForm.errors.email)
-                                    }
-                                    helperText={
-                                        registrationForm.touched.email &&
-                                        registrationForm.errors.email
-                                    }
-                                    slotProps={{
-                                        input: {
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <MailOutline />
-                                                </InputAdornment>
-                                            ),
-                                        },
-                                    }}
-                                />
-                            )}
-
-                            <TextField
-                                id="password"
-                                name="password"
-                                label="Password"
-                                type={showPassword ? "text" : "password"}
-                                value={
-                                    authMode === AuthMode.login
-                                        ? loginForm.values.password
-                                        : registrationForm.values.password
-                                }
-                                onChange={
-                                    authMode === AuthMode.login
-                                        ? loginForm.handleChange
-                                        : registrationForm.handleChange
-                                }
-                                onBlur={
-                                    authMode === AuthMode.login
-                                        ? loginForm.handleBlur
-                                        : registrationForm.handleBlur
-                                }
-                                error={
-                                    (loginForm.touched.password &&
-                                        Boolean(loginForm.errors.password)) ||
-                                    (registrationForm.touched.password &&
-                                        Boolean(registrationForm.errors.password))
-                                }
-                                helperText={
-                                    (loginForm.touched.password && loginForm.errors.password) ||
-                                    (registrationForm.touched.password &&
-                                        registrationForm.errors.password)
-                                }
-                                fullWidth
-                                slotProps={{
-                                    input: {
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <LockOutlined />
-                                            </InputAdornment>
-                                        ),
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <IconButton
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    edge="end"
-                                                >
-                                                    {showPassword ? (
-                                                        <VisibilityOff />
-                                                    ) : (
-                                                        <Visibility />
-                                                    )}
-                                                </IconButton>
-                                            </InputAdornment>
-                                        ),
-                                    },
-                                }}
-                            />
-                            {authMode === AuthMode.login && (
-                                <Stack
-                                    direction="row"
-                                    justifyContent="space-between"
-                                    alignItems="center"
-                                    sx={{ flexWrap: "wrap", gap: 1 }}
-                                >
-                                    <FormControlLabel
-                                        control={<Checkbox name="remember" />}
-                                        label="Remember me"
+                    <FormContainer>
+                        <Fade
+                            in={!isTransitioning}
+                            timeout={300}
+                            style={{
+                                transitionDelay: isTransitioning ? "0ms" : "150ms",
+                            }}
+                        >
+                            <Box>
+                                {authMode === AuthMode.login ? (
+                                    <LoginForm
+                                        loginForm={loginForm}
+                                        loading={loading}
+                                        showPassword={showPassword}
+                                        setShowPassword={setShowPassword}
                                     />
-                                    <Button variant="text" size="small">
-                                        Forgot password?
-                                    </Button>
-                                </Stack>
-                            )}
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                size="large"
-                                fullWidth
-                                disabled={loading}
-                            >
-                                {loading
-                                    ? "Please wait..."
-                                    : authMode === AuthMode.login
-                                      ? "Sign in"
-                                      : "Sign up"}
-                            </Button>
-                        </Stack>
-                    </form>
+                                ) : (
+                                    <RegistrationForm
+                                        registrationForm={registrationForm}
+                                        usernameExists={usernameExists}
+                                        setShowPassword={setShowPassword}
+                                        loading={loading}
+                                        checkUsernameExists={checkUsernameExists}
+                                        showPassword={showPassword}
+                                    />
+                                )}
+                            </Box>
+                        </Fade>
+                    </FormContainer>
 
                     {/* TODO: <Divider sx={{ my: 3 }}>Or continue with</Divider>
 
