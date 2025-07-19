@@ -8,7 +8,8 @@ from django.middleware.csrf import get_token
 from django.utils import timezone
 from rest_framework import generics, permissions, status, views, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -151,7 +152,7 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
         room_id = self.request.query_params.get("room")
         if room_id is not None:
             queryset = queryset.filter(room__id=room_id)
-        return queryset
+        return queryset.order_by("-timestamp")
 
     @override
     def perform_create(self, serializer):

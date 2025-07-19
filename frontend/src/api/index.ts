@@ -4,6 +4,7 @@ import {
     Media,
     Message,
     MessagePayload,
+    PaginatedResponse,
     RegistrationCredentials,
 } from "./types";
 
@@ -22,7 +23,7 @@ export class APIService {
     }
 
     async request(endpoint: string, options: RequestInit = {}, isFormData: boolean = false) {
-        const url = `${this.baseApiUrl}${endpoint}`;
+        const requestURL = endpoint.startsWith("http") ? endpoint : `${this.baseApiUrl}${endpoint}`;
 
         const headers = {
             "X-CSRFToken": await this.getCSRF(),
@@ -41,7 +42,7 @@ export class APIService {
         };
 
         try {
-            const response = await fetch(url, config);
+            const response = await fetch(requestURL, config);
 
             if (response.status === 500) {
                 throw new Error("INTERNAL SERVER ERROR!");
@@ -113,7 +114,7 @@ export class APIService {
     }
 
     // Chat methods
-    async getRooms(): Promise<ChatRoom[]> {
+    async getRooms(): Promise<PaginatedResponse<ChatRoom>> {
         const response = await this.request("/rooms/");
         return response.data;
     }
@@ -126,8 +127,18 @@ export class APIService {
         return response.data;
     }
 
-    async getMessages(roomId: number): Promise<Message[]> {
-        const response = await this.request(`/messages/?room=${roomId}`);
+    async getMessages(
+        roomId: number,
+        next: string | null = null,
+    ): Promise<PaginatedResponse<Message>> {
+        var response = undefined;
+        if (next) {
+            const url = new URL(next);
+            url.searchParams.set("room", `${roomId}`);
+            response = await this.request(url.toString());
+        } else {
+            response = await this.request(`/messages/?room=${roomId}`);
+        }
         return response.data;
     }
 

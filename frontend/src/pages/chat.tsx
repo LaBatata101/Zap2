@@ -28,6 +28,7 @@ enum ChatActionType {
     SetConnectionStatus,
     SetSearchTerm,
     SetHighlightedMessage,
+    SetMessagesLoading,
     ReceiveMessage,
     Error,
 }
@@ -44,6 +45,9 @@ type ChatState = {
     rooms: ChatRoom[];
     currentRoom?: ChatRoom;
     messages: Message[];
+    hasMoreMessages: boolean;
+    nextMessagesUrl: string | null;
+    messagesLoading: boolean;
     connectionStatus: ConnectionStatus;
     searchTerm: string;
     highlightedMessageId?: number;
@@ -51,26 +55,30 @@ type ChatState = {
 
 type ChatAction =
     | {
-          type:
-              | ChatActionType.LoginStart
-              | ChatActionType.RegistrationStart
-              | ChatActionType.Logout
-              | ChatActionType.Error;
-      }
+        type:
+        | ChatActionType.LoginStart
+        | ChatActionType.RegistrationStart
+        | ChatActionType.Logout
+        | ChatActionType.Error;
+    }
     | {
-          type: ChatActionType.LoginSuccess | ChatActionType.RegistrationSuccess;
-          payload: { user: User };
-      }
+        type: ChatActionType.LoginSuccess | ChatActionType.RegistrationSuccess;
+        payload: { user: User };
+    }
     | { type: ChatActionType.SelectRoom; payload: ChatRoom }
-    | { type: ChatActionType.SetMessages; payload: Message[] }
+    | {
+        type: ChatActionType.SetMessages;
+        payload: { messages: Message[]; next: string | null; hasMore: boolean };
+    }
     | { type: ChatActionType.SetRooms; payload: ChatRoom[] }
     | { type: ChatActionType.SetConnectionStatus; payload: ConnectionStatus }
     | { type: ChatActionType.SetSearchTerm; payload: string }
+    | { type: ChatActionType.SetMessagesLoading; payload: boolean }
     | { type: ChatActionType.SetHighlightedMessage; payload?: number }
-    | { type: ChatActionType.SetRooms; payload: ChatRoom[] }
     | { type: ChatActionType.UpdatedRoomMetadata; payload: Message }
     | { type: ChatActionType.ResetUnreadCount; payload: number }
     | { type: ChatActionType.ReceiveMessage; payload: Message };
+
 const initialState: ChatState = {
     user: undefined,
     rooms: [],
@@ -79,6 +87,9 @@ const initialState: ChatState = {
     connectionStatus: ConnectionStatus.Connected,
     searchTerm: "",
     highlightedMessageId: undefined,
+    hasMoreMessages: true,
+    nextMessagesUrl: null,
+    messagesLoading: false,
 };
 
 function chatReducer(state: ChatState, action: ChatAction) {
@@ -113,14 +124,14 @@ function chatReducer(state: ChatState, action: ChatAction) {
             const updatedRooms = rooms.map((room) =>
                 room.id === message.room
                     ? {
-                          ...room,
-                          last_message: message.content,
-                          last_message_timestamp: message.timestamp,
-                          unread_count:
-                              currentRoom?.id === message.room
-                                  ? room.unread_count
-                                  : room.unread_count + 1,
-                      }
+                        ...room,
+                        last_message: message.content,
+                        last_message_timestamp: message.timestamp,
+                        unread_count:
+                            currentRoom?.id === message.room
+                                ? room.unread_count
+                                : room.unread_count + 1,
+                    }
                     : room,
             );
 
@@ -144,13 +155,20 @@ function chatReducer(state: ChatState, action: ChatAction) {
                     : undefined,
             };
         case ChatActionType.SetMessages:
-            return { ...state, messages: action.payload };
+            return {
+                ...state,
+                messages: [...action.payload.messages, ...state.messages],
+                nextMessagesUrl: action.payload.next,
+                hasMoreMessages: action.payload.hasMore,
+            };
         case ChatActionType.SetConnectionStatus:
             return { ...state, connectionStatus: action.payload };
         case ChatActionType.SetSearchTerm:
             return { ...state, searchTerm: action.payload };
         case ChatActionType.SetHighlightedMessage:
             return { ...state, highlightedMessageId: action.payload };
+        case ChatActionType.SetMessagesLoading:
+            return { ...state, messagesLoading: action.payload };
         default:
             throw new Error(`Unhandled action type: ${action.type}`);
     }
@@ -166,6 +184,9 @@ export const ChatApp = () => {
         connectionStatus,
         searchTerm,
         highlightedMessageId,
+        hasMoreMessages,
+        nextMessagesUrl,
+        messagesLoading,
     } = state;
 
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -202,7 +223,7 @@ export const ChatApp = () => {
                     const roomsData = await apiService.current.getRooms();
                     dispatch({
                         type: ChatActionType.SetRooms,
-                        payload: roomsData,
+                        payload: roomsData.results,
                     });
                 } catch (reason) {
                     console.error("Failed to load chat conversations: ", reason);
@@ -241,6 +262,7 @@ export const ChatApp = () => {
         service.on("error", handleError);
     }, []);
 
+    // Initial load of messages when a chat is selected
     useEffect(() => {
         if (currentRoom) {
             const fetchMessages = async () => {
@@ -248,7 +270,11 @@ export const ChatApp = () => {
                     const messagesData = await apiService.current.getMessages(currentRoom.id);
                     dispatch({
                         type: ChatActionType.SetMessages,
-                        payload: messagesData,
+                        payload: {
+                            messages: messagesData.results,
+                            next: messagesData.next,
+                            hasMore: messagesData.next !== null,
+                        },
                     });
                 } catch (error) {
                     console.error("Error fetching messages: ", error);
@@ -257,6 +283,30 @@ export const ChatApp = () => {
             fetchMessages();
         }
     }, [currentRoom]);
+
+    const fetchMoreMessages = useCallback(async () => {
+        if (!nextMessagesUrl || !hasMoreMessages || messagesLoading) return;
+
+        dispatch({ type: ChatActionType.SetMessagesLoading, payload: true });
+        try {
+            const messagesData = await apiService.current.getMessages(
+                currentRoom!.id,
+                nextMessagesUrl,
+            );
+            dispatch({
+                type: ChatActionType.SetMessages,
+                payload: {
+                    messages: messagesData.results,
+                    next: messagesData.next,
+                    hasMore: messagesData.next !== null,
+                },
+            });
+        } catch (e) {
+            console.error("Error fetching messages: ", e);
+        } finally {
+            dispatch({ type: ChatActionType.SetMessagesLoading, payload: false });
+        }
+    }, [nextMessagesUrl]);
 
     const handleLogin = async (credentials: LoginCredentials) => {
         dispatch({ type: ChatActionType.LoginStart });
@@ -417,6 +467,9 @@ export const ChatApp = () => {
                         onMenuClick={handleSidebarToggle}
                         onReplyClick={handleReplyClick}
                         highlightedMessageId={highlightedMessageId}
+                        onFetchMoreMessages={fetchMoreMessages}
+                        hasMoreMessages={hasMoreMessages}
+                        messagesLoading={messagesLoading}
                     />
                 </Box>
             </Box>

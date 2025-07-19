@@ -30,6 +30,9 @@ type ChatAreaProps = {
     onMenuClick: () => void;
     onReplyClick: (messageId: number) => void;
     highlightedMessageId?: number;
+    onFetchMoreMessages: () => void;
+    hasMoreMessages: boolean;
+    messagesLoading: boolean;
 };
 
 export const ChatArea = ({
@@ -44,6 +47,9 @@ export const ChatArea = ({
     onMenuClick,
     onReplyClick,
     highlightedMessageId,
+    onFetchMoreMessages,
+    hasMoreMessages,
+    messagesLoading,
 }: ChatAreaProps) => {
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
     const theme = useTheme();
@@ -176,6 +182,9 @@ export const ChatArea = ({
                 highlightedMessageId={highlightedMessageId}
                 firstUnreadIndex={firstUnreadIndex}
                 unreadCount={currentRoom?.unread_count || 0}
+                onFetchMore={onFetchMoreMessages}
+                hasMore={hasMoreMessages}
+                isLoading={messagesLoading}
             />
             <MessageInput
                 isConnected={isConnected}

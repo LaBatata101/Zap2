@@ -1,6 +1,16 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as types from "../api/types";
-import { Box, Chip, Fab, ListItemIcon, ListItemText, Menu, MenuItem, Zoom } from "@mui/material";
+import {
+    Box,
+    Chip,
+    CircularProgress,
+    Fab,
+    ListItemIcon,
+    ListItemText,
+    Menu,
+    MenuItem,
+    Zoom,
+} from "@mui/material";
 import { formatDate } from "../helpers/format";
 import { Message, MessageSequenceType } from "./message";
 import { ContentCopy, KeyboardArrowDown, Reply } from "@mui/icons-material";
@@ -19,6 +29,16 @@ interface MessageListProps {
     highlightedMessageId?: number;
     firstUnreadIndex: number | null;
     unreadCount: number;
+    onFetchMore: () => void;
+    hasMore: boolean;
+    isLoading: boolean;
+}
+
+interface ScrollState {
+    scrollTop: number;
+    scrollHeight: number;
+    messagesLength: number;
+    isActive: boolean;
 }
 
 export const MessageList = memo(
@@ -30,6 +50,9 @@ export const MessageList = memo(
         highlightedMessageId,
         firstUnreadIndex,
         unreadCount,
+        onFetchMore,
+        hasMore,
+        isLoading,
     }: MessageListProps) => {
         const messagesEndRef = useRef<HTMLDivElement>(null);
         const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -38,14 +61,112 @@ export const MessageList = memo(
         const firstUnreadRef = useRef<HTMLDivElement>(null);
         const prevMessagesLength = useRef(0);
 
+        const scrollStateRef = useRef<ScrollState | null>(null);
+        const isRestoring = useRef(false);
+        const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+        const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+        // Debounced fetch to prevent multiple simultaneous requests
+        const debouncedFetch = useCallback(() => {
+            if (fetchTimeoutRef.current) {
+                clearTimeout(fetchTimeoutRef.current);
+            }
+
+            fetchTimeoutRef.current = setTimeout(() => {
+                const container = scrollContainerRef.current;
+                if (!container || isLoading) return;
+
+                // Save current scroll state with more precision
+                const currentState: ScrollState = {
+                    scrollTop: container.scrollTop,
+                    scrollHeight: container.scrollHeight,
+                    messagesLength: messages.length,
+                    isActive: true,
+                };
+
+                scrollStateRef.current = currentState;
+                onFetchMore();
+            }, 100); // Small debounce to prevent rapid calls
+        }, [onFetchMore, messages.length, isLoading]);
+
+        const restoreScrollPosition = useCallback(() => {
+            const container = scrollContainerRef.current;
+            const savedState = scrollStateRef.current;
+
+            if (!container || !savedState || !savedState.isActive) return;
+
+            isRestoring.current = true;
+
+            // Calculate the height difference more accurately
+            const heightDifference = container.scrollHeight - savedState.scrollHeight;
+
+            // Apply the scroll position with the height difference
+            const newScrollTop = savedState.scrollTop + heightDifference;
+
+            // Use requestAnimationFrame for better timing
+            requestAnimationFrame(() => {
+                container.scrollTop = newScrollTop;
+
+                // Verify the position was set correctly, and adjust if needed
+                requestAnimationFrame(() => {
+                    const actualScrollTop = container.scrollTop;
+                    const expectedScrollTop = newScrollTop;
+
+                    // If there's still a significant difference, try to correct it
+                    if (Math.abs(actualScrollTop - expectedScrollTop) > 10) {
+                        container.scrollTop = expectedScrollTop;
+                    }
+
+                    // Mark restoration as complete
+                    setTimeout(() => {
+                        isRestoring.current = false;
+                        if (scrollStateRef.current) {
+                            scrollStateRef.current.isActive = false;
+                        }
+                    }, 50);
+                });
+            });
+        }, []);
+
+        useEffect(() => {
+            const container = scrollContainerRef.current;
+            if (!container) return;
+
+            // Create resize observer to handle dynamic content changes
+            resizeObserverRef.current = new ResizeObserver((_) => {
+                if (isRestoring.current && scrollStateRef.current?.isActive) {
+                    // Re-run restoration if content is still changing
+                    restoreScrollPosition();
+                }
+            });
+
+            resizeObserverRef.current.observe(container);
+
+            return () => {
+                if (resizeObserverRef.current) {
+                    resizeObserverRef.current.disconnect();
+                }
+            };
+        }, [restoreScrollPosition]);
+
+        useLayoutEffect(() => {
+            // Skip if not loading or no saved state
+            if (isLoading || !scrollStateRef.current?.isActive) return;
+
+            // Only restore if messages were actually added
+            if (messages.length > scrollStateRef.current.messagesLength) {
+                restoreScrollPosition();
+            }
+        }, [messages, isLoading, restoreScrollPosition]);
+
         useEffect(() => {
             if (prevMessagesLength.current === 0 && messages.length > 0) {
                 if (firstUnreadIndex !== null && firstUnreadRef.current) {
                     // Scroll to the first unread message in the chat
-                    firstUnreadRef.current.scrollIntoView({ behavior: "smooth" });
+                    firstUnreadRef.current.scrollIntoView({ behavior: "auto" });
                 } else if (messagesEndRef.current) {
                     // Initial scroll to bottom when selecting a chat
-                    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+                    messagesEndRef.current.scrollIntoView({ behavior: "instant" });
                 }
             } else if (messages.length > prevMessagesLength.current) {
                 // Auto-scroll to bottom when new messages arrive
@@ -68,18 +189,35 @@ export const MessageList = memo(
                 const isNearBottom =
                     container.scrollHeight - container.scrollTop - container.clientHeight < 100;
                 setShowScrollButton(!isNearBottom);
+
+                const isAtTop = container.scrollTop <= 10;
+                if (isAtTop && hasMore && !isLoading) {
+                    debouncedFetch();
+                }
             }
         };
+
+        // Cleanup function
+        useEffect(() => {
+            return () => {
+                if (fetchTimeoutRef.current) {
+                    clearTimeout(fetchTimeoutRef.current);
+                }
+                if (resizeObserverRef.current) {
+                    resizeObserverRef.current.disconnect();
+                }
+            };
+        }, []);
 
         const handleContextMenu = useCallback((event: React.MouseEvent, message: types.Message) => {
             event.preventDefault();
             setContextMenu(
                 contextMenu === null
                     ? {
-                          mouseX: event.clientX - 2,
-                          mouseY: event.clientY - 4,
-                          message: message,
-                      }
+                        mouseX: event.clientX - 2,
+                        mouseY: event.clientY - 4,
+                        message: message,
+                    }
                     : null,
             );
         }, []);
@@ -117,6 +255,12 @@ export const MessageList = memo(
                 onScroll={handleScroll}
                 sx={{ flex: 1, overflowY: "auto", p: 2, bgcolor: "background.default" }}
             >
+                {isLoading && (
+                    <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                        <CircularProgress size={24} />
+                    </Box>
+                )}
+
                 {messages.map((message, index) => {
                     const isFirstUnread = firstUnreadIndex !== null && index === firstUnreadIndex;
                     const previousMessage = index > 0 ? messages[index - 1] : null;
