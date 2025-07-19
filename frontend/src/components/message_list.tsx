@@ -209,10 +209,8 @@ export const MessageList = memo(
                             bottom: 80,
                             right: 16,
                             zIndex: 1000,
-                            boxShadow: "0 4px 16px rgba(59, 130, 246, 0.3)",
-                            "&:hover": {
-                                boxShadow: "0 6px 20px rgba(59, 130, 246, 0.4)",
-                            },
+                            bgcolor: "background.paper",
+                            color: "text.primary",
                         }}
                         aria-label="scroll to bottom"
                     >
