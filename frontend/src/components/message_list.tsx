@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import * as types from "../api/types";
 import { Box, Chip, Fab, ListItemIcon, ListItemText, Menu, MenuItem, Zoom } from "@mui/material";
 import { formatDate } from "../helpers/format";
@@ -71,7 +71,7 @@ export const MessageList = memo(
             }
         };
 
-        const handleContextMenu = (event: React.MouseEvent, message: types.Message) => {
+        const handleContextMenu = useCallback((event: React.MouseEvent, message: types.Message) => {
             event.preventDefault();
             setContextMenu(
                 contextMenu === null
@@ -82,7 +82,7 @@ export const MessageList = memo(
                       }
                     : null,
             );
-        };
+        }, []);
 
         const handleClose = () => {
             setContextMenu(null);
