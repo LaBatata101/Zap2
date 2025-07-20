@@ -355,7 +355,7 @@ export const AuthPage = ({
             password: "",
         },
         validationSchema: registrationScheme,
-        onSubmit: async (values) => {
+        onSubmit: async (values, { resetForm }) => {
             if (usernameExists) {
                 setSnackbar({
                     open: true,
@@ -373,6 +373,7 @@ export const AuthPage = ({
                         message: "Sign up successful!",
                         severity: "success",
                     });
+                    resetForm();
                 } else {
                     setSnackbar({
                         open: true,
