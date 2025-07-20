@@ -85,21 +85,14 @@ export class APIService {
     }
 
     async register(credentials: RegistrationCredentials) {
-        const response = await fetch(`${API_CONFIG.apiUrl}/register/`, {
+        const response = await this.request("/user/", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": await this.getCSRF(),
-            },
-            credentials: "include",
             body: JSON.stringify(credentials),
         });
-
-        if (response.ok) {
-            const data = await response.json();
-            return data;
+        if (response.status !== 201) {
+            throw new Error(`Registration failed: ${response.data}`);
         }
-        throw new Error(`Registration failed: ${await response.text()}`);
+        return response.data;
     }
 
     async logout() {

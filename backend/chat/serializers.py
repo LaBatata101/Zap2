@@ -17,7 +17,7 @@ class ProfileSerializer(serializers.ModelSerializer[Profile]):
 
 
 class UserSerializer(serializers.ModelSerializer[User]):
-    profile = ProfileSerializer()
+    profile = ProfileSerializer(required=False)
 
     class Meta:
         model = User

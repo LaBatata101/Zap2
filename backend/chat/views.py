@@ -14,7 +14,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .models import ChatRoom, Membership, Message, MessageMedia
-from .permissions import IsOwnerOrReadOnly
+from .permissions import IsOwnerOrReadOnly, UserPermissions
 from .serializers import (ChatRoomSerializer, MessageMediaSerializer,
                           MessageSerializer, RegisterSerializer,
                           UserSerializer)
@@ -24,60 +24,24 @@ def get_csrf(request):
     return JsonResponse({"csrf_token": get_token(request)})
 
 
-class CheckUsernameView(views.APIView):
-    """
-    Endpoint to check if a username already exists.
-
-    Allows any user to check if a username is taken.
-    Returns a JSON response with a single key "exists" that is true if the username exists, false otherwise.
-    """
-
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, _, username):
-        if User.objects.filter(username=username).exists():
-            return Response(status=status.HTTP_200_OK)
-        else:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-
-class UserDetailView(generics.RetrieveAPIView[User]):
-    """
-    A view to retrieve user information by username.
-    """
-
+class UserViewSet(viewsets.ModelViewSet[User]):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [UserPermissions]
     lookup_field = "username"
 
-
-class UserRegisterView(generics.CreateAPIView[User]):
-    permission_classes = [permissions.AllowAny]
-    serializer_class = RegisterSerializer
-
-    @override
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-
-        authenticated_user = authenticate(
-            username=serializer.validated_data["username"], password=serializer.validated_data["password"]
+    @action(
+        methods=["get"],
+        detail=False,
+        url_path=r"exists/(?P<username>[^/.]+)",
+        permission_classes=[permissions.AllowAny],
+    )
+    def exists(self, request, username=None):
+        return (
+            Response(status=status.HTTP_200_OK)
+            if User.objects.filter(username=username).exists()
+            else Response(status=status.HTTP_404_NOT_FOUND)
         )
-        if authenticated_user:
-            login(request, authenticated_user)
-            return Response(
-                {
-                    "user": {
-                        "id": authenticated_user.id,
-                        "username": authenticated_user.username,
-                        "is_admin": authenticated_user.is_superuser,
-                    },
-                },
-                status=status.HTTP_201_CREATED,
-            )
-        return Response({"error": "Failed to authenticate user after registration"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserLoginView(views.APIView):
