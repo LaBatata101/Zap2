@@ -1,5 +1,6 @@
 import {
     ChatRoom,
+    CropAvatarData,
     LoginCredentials,
     Media,
     Message,
@@ -159,9 +160,59 @@ export class APIService {
         return response.data;
     }
 
+    // User methods
     async checkIfUserExists(username: string): Promise<boolean> {
         const response = await this.request(`/user/exists/${username}/`);
         return response.status === 200;
+    }
+
+    async updateUserInfo(
+        username: string,
+        updatedUser: {
+            username?: string;
+            profile?: {
+                bio?: string;
+                avatar_img: File | null;
+                crop_avatar_data: CropAvatarData | null;
+            };
+        },
+    ) {
+        const formData = new FormData();
+        if (updatedUser.username) {
+            formData.append("username", updatedUser.username);
+        }
+        if (updatedUser.profile?.bio) {
+            formData.append("profile.bio", updatedUser.profile.bio);
+        }
+
+        if (updatedUser.profile?.avatar_img) {
+            formData.append(
+                "profile.avatar_img",
+                updatedUser.profile.avatar_img,
+                updatedUser.profile.avatar_img.name,
+            );
+            if (updatedUser.profile.crop_avatar_data) {
+                const crop_avatar_data = updatedUser.profile.crop_avatar_data;
+                formData.append("crop_x", crop_avatar_data.x.toString());
+                formData.append("crop_y", crop_avatar_data.y.toString());
+                formData.append("crop_size", crop_avatar_data.cropSize.toString());
+                formData.append("crop_scale", crop_avatar_data.scale.toString());
+                formData.append("crop_container_width", crop_avatar_data.containerWidth.toString());
+                formData.append(
+                    "crop_container_height",
+                    crop_avatar_data.containerHeight.toString(),
+                );
+            }
+        }
+
+        return await this.request(
+            `/user/${username}/`,
+            {
+                method: "PATCH",
+                body: formData,
+            },
+            true,
+        );
     }
 }
 type ConnectCallback = () => void;

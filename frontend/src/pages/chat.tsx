@@ -5,6 +5,7 @@ import { Sidebar, sidebarWidth } from "../components/sidebar";
 import { ChatArea } from "../components/chat_area";
 import {
     ChatRoom,
+    CropAvatarData,
     LoginCredentials,
     Message,
     MessagePayload,
@@ -18,7 +19,7 @@ enum ChatActionType {
     RegistrationStart,
     LoginStart,
     RegistrationSuccess,
-    LoginSuccess,
+    SetUser,
     Logout,
     SelectRoom,
     SetMessages,
@@ -62,7 +63,7 @@ type ChatAction =
         | ChatActionType.Error;
     }
     | {
-        type: ChatActionType.LoginSuccess | ChatActionType.RegistrationSuccess;
+        type: ChatActionType.SetUser | ChatActionType.RegistrationSuccess;
         payload: { user: User };
     }
     | { type: ChatActionType.SelectRoom; payload: ChatRoom }
@@ -98,7 +99,7 @@ function chatReducer(state: ChatState, action: ChatAction) {
         case ChatActionType.LoginStart:
             return { ...state };
         case ChatActionType.RegistrationSuccess:
-        case ChatActionType.LoginSuccess:
+        case ChatActionType.SetUser:
             return {
                 ...state,
                 user: action.payload.user,
@@ -213,28 +214,6 @@ export const ChatApp = () => {
         }
     }, []);
 
-    // Connect to websocket and load initial data after login
-    useEffect(() => {
-        if (user) {
-            wsService.current.connect();
-
-            const loadData = async () => {
-                try {
-                    const roomsData = await apiService.current.getRooms();
-                    dispatch({
-                        type: ChatActionType.SetRooms,
-                        payload: roomsData.results,
-                    });
-                } catch (reason) {
-                    console.error("Failed to load chat conversations: ", reason);
-                    dispatch({ type: ChatActionType.Error });
-                }
-            };
-
-            loadData();
-        }
-    }, [user]);
-
     // Handle websocket events
     useEffect(() => {
         const service = wsService.current;
@@ -248,11 +227,12 @@ export const ChatApp = () => {
                 type: ChatActionType.SetConnectionStatus,
                 payload: ConnectionStatus.Connected,
             });
-        const handleDisconnect = () =>
+        const handleDisconnect = () => {
             dispatch({
                 type: ChatActionType.SetConnectionStatus,
                 payload: ConnectionStatus.Disconnected,
             });
+        };
         const handleError = () =>
             dispatch({ type: ChatActionType.SetConnectionStatus, payload: ConnectionStatus.Error });
 
@@ -314,9 +294,27 @@ export const ChatApp = () => {
         try {
             const result = await apiService.current.login(credentials);
             dispatch({
-                type: ChatActionType.LoginSuccess,
+                type: ChatActionType.SetUser,
                 payload: { user: result.user },
             });
+
+            wsService.current.connect();
+
+            const loadData = async () => {
+                try {
+                    const roomsData = await apiService.current.getRooms();
+                    dispatch({
+                        type: ChatActionType.SetRooms,
+                        payload: roomsData.results,
+                    });
+                } catch (reason) {
+                    console.error("Failed to load chat conversations: ", reason);
+                    dispatch({ type: ChatActionType.Error });
+                }
+            };
+
+            loadData();
+
             return true;
         } catch (error) {
             console.log(error);
@@ -413,6 +411,31 @@ export const ChatApp = () => {
         setReplyingTo(null);
     }, []);
 
+    const handleUpdateUserProfile = async (
+        username: string,
+        bio: string,
+        avatar: File | null,
+        cropAvatarData: CropAvatarData | null,
+    ) => {
+        try {
+            const response = await apiService.current.updateUserInfo(username, {
+                username,
+                profile: { bio, avatar_img: avatar, crop_avatar_data: cropAvatarData },
+            });
+
+            if (response.status === 200) {
+                dispatch({
+                    type: ChatActionType.SetUser,
+                    payload: { user: response.data },
+                });
+            }
+            return response.status === 200;
+        } catch (error) {
+            console.error("Failed to update user info: ", error);
+        }
+        return false;
+    };
+
     if (!user) {
         return (
             <AuthPage
@@ -440,6 +463,7 @@ export const ChatApp = () => {
                     isMobile={isMobile}
                     isOpen={isSidebarOpen}
                     onToggle={handleSidebarToggle}
+                    onUpdateProfile={handleUpdateUserProfile}
                 />
                 <Box
                     component="main"

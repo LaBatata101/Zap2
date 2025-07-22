@@ -12,7 +12,7 @@ class UserPermissions(permissions.BasePermission):
             return False
 
         if view.action in ("destroy", "update", "partial_update"):
-            return obj.owner == request.user or request.user.is_superuser
+            return obj == request.user or request.user.is_superuser
         else:
             return True
 

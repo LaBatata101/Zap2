@@ -51,14 +51,9 @@ class UserLoginView(views.APIView):
         authenticated_user = authenticate(username=request.data["username"], password=request.data["password"])
         if authenticated_user:
             login(request, authenticated_user)
+            user_data = UserSerializer(authenticated_user, context={"request": request}).data
             return Response(
-                {
-                    "user": {
-                        "id": authenticated_user.id,
-                        "username": authenticated_user.username,
-                        "is_admin": authenticated_user.is_superuser,
-                    }
-                },
+                {"user": user_data},
                 status=status.HTTP_200_OK,
             )
         else:

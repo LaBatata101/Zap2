@@ -57,3 +57,12 @@ export type PaginatedResponse<T> = {
     previous: string | null;
     results: T[];
 };
+
+export type CropAvatarData = {
+    x: number;
+    y: number;
+    scale: number;
+    containerWidth: number;
+    containerHeight: number;
+    cropSize: number;
+};

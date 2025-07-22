@@ -1,11 +1,9 @@
-from typing import override
+from typing import Any, override
 
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from rest_framework import serializers
+
+from chat.utils.image import crop_avatar_img
 
 from .models import ChatRoom, Membership, Message, MessageMedia, Profile
 
@@ -15,13 +13,53 @@ class ProfileSerializer(serializers.ModelSerializer[Profile]):
         model = Profile
         fields = ("bio", "avatar_img")
 
+    def validate_avatar_img(self, value):
+        if value.size > 5 * 1024 * 1024:  # 5MB
+            raise serializers.ValidationError("File exceeded the 5MB limit.")
+        return value
+
 
 class UserSerializer(serializers.ModelSerializer[User]):
     profile = ProfileSerializer(required=False)
 
     class Meta:
         model = User
-        fields = ("id", "username", "profile")
+        fields = ("id", "username", "is_superuser", "profile")
+
+    @override
+    def update(self, instance, validated_data: dict[Any, Any]):
+        if "is_superuser" in validated_data and not instance.is_superuser:
+            raise serializers.ValidationError(
+                {"is_superuser": "User doesn't have the necessary permission to change this field"}
+            )
+
+        instance.username = validated_data.get("username", instance.username)
+        request = self.context.get("request")
+
+        profile_data = validated_data.pop("profile")
+        if profile_data:
+            request = self.context.get("request")
+
+            profile = instance.profile
+            profile.bio = profile_data.get("bio", profile.bio)
+            if "crop_x" in request.data and "avatar_img" in profile_data:
+                crop_data = {
+                    "x": float(request.data.get("crop_x")),
+                    "y": float(request.data.get("crop_y")),
+                    "scale": float(request.data.get("crop_scale")),
+                    "crop_size": int(request.data.get("crop_size")),
+                    "container_width": int(request.data.get("crop_container_width")),
+                    "container_height": int(request.data.get("crop_container_height")),
+                }
+                profile.avatar_img = crop_avatar_img(
+                    profile_data.get("avatar_img"), f"avatar_{request.data.get("username")}", crop_data
+                )
+            else:
+                profile.avatar_img = profile_data.get("avatar_img", profile.avatar_img)
+
+        instance.save()
+
+        return instance
 
 
 class RepliedMessageSerializer(serializers.ModelSerializer[Message]):

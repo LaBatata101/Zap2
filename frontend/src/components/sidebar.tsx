@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChatRoom, User } from "../api/types";
+import { ChatRoom, CropAvatarData, User } from "../api/types";
 import {
     Drawer,
     Avatar,
@@ -21,6 +21,7 @@ import {
 import { Logout, Settings, Add, Search, Person } from "@mui/icons-material";
 import { StyledTooltip } from "./styled";
 import { RoomListItem } from "./room_list_item";
+import { UserProfileDialog } from "./user_profile_dialog";
 
 export const sidebarWidth = 320;
 
@@ -34,6 +35,46 @@ const StyledDrawer = styled(Drawer)({
     },
 });
 
+// Enhanced user profile section with hover effects
+const UserProfileSection = styled(Box)(({ theme }) => ({
+    cursor: "pointer",
+    borderRadius: theme.shape.borderRadius,
+    padding: theme.spacing(1),
+    margin: "-8px", // Negative margin to expand clickable area
+    transition: "all 0.2s ease-in-out",
+
+    "&:hover": {
+        backgroundColor: "rgba(59, 130, 246, 0.08)",
+        transform: "translateY(-1px)",
+
+        "& .username": {
+            color: theme.palette.primary.light,
+        },
+
+        "& .status": {
+            color: theme.palette.success.light,
+        },
+
+        "& .avatar": {
+            transform: "scale(1.05)",
+            boxShadow: "0 6px 16px rgba(59, 130, 246, 0.4)",
+        },
+    },
+
+    "&:active": {
+        transform: "translateY(0px)",
+    },
+}));
+
+const EnhancedAvatar = styled(Avatar)(({ theme }) => ({
+    background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+    width: 50,
+    height: 50,
+    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
+    transition: "all 0.2s ease-in-out",
+    border: `2px solid ${theme.palette.background.paper}`,
+}));
+
 type SidebarProps = {
     user: User;
     rooms: any[];
@@ -46,6 +87,12 @@ type SidebarProps = {
     isMobile: boolean;
     isOpen: boolean;
     onToggle: () => void;
+    onUpdateProfile: (
+        username: string,
+        bio: string,
+        avatar: File | null,
+        cropAvatarData: CropAvatarData | null,
+    ) => Promise<boolean>;
 };
 
 export const Sidebar = ({
@@ -60,10 +107,12 @@ export const Sidebar = ({
     isMobile,
     isOpen,
     onToggle,
+    onUpdateProfile,
 }: SidebarProps) => {
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [newRoomName, setNewRoomName] = useState("");
     const [loading, setLoading] = useState(false);
+    const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
 
     const handleCreateRoom = async () => {
         if (!newRoomName.trim()) return;
@@ -95,7 +144,7 @@ export const Sidebar = ({
             >
                 <Stack spacing={2}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1 }}>
                             <Badge
                                 overlap="circular"
                                 anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
@@ -110,34 +159,56 @@ export const Sidebar = ({
                                     },
                                 }}
                             >
-                                <Avatar
-                                    sx={{
-                                        background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-                                        width: 40,
-                                        height: 40,
-                                        boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-                                    }}
-                                >
-                                    <Person />
-                                </Avatar>
+                                <EnhancedAvatar className="avatar">
+                                    {user.profile?.avatar_img ? (
+                                        <img
+                                            src={user.profile.avatar_img}
+                                            alt="User Avatar"
+                                            style={{
+                                                width: "100%",
+                                                height: "100%",
+                                                objectFit: "cover",
+                                                borderRadius: "50%",
+                                            }}
+                                        />
+                                    ) : (
+                                        <Person />
+                                    )}
+                                </EnhancedAvatar>
                             </Badge>
-                            <Box>
-                                <Typography
-                                    variant="subtitle1"
-                                    fontWeight="bold"
-                                    color="text.primary"
-                                >
-                                    {user.username}
-                                </Typography>
-                                <Typography
-                                    variant="body2"
-                                    color="success.main"
-                                    sx={{ fontSize: "0.8rem" }}
-                                >
-                                    Online
-                                </Typography>
-                            </Box>
+
+                            <UserProfileSection
+                                onClick={() => setProfileDialogOpen(true)}
+                                sx={{ flex: 1 }}
+                            >
+                                <Box>
+                                    <Typography
+                                        variant="subtitle1"
+                                        fontWeight="bold"
+                                        color="text.primary"
+                                        className="username"
+                                        sx={{
+                                            transition: "color 0.2s ease-in-out",
+                                            fontSize: "0.95rem",
+                                        }}
+                                    >
+                                        {user.username}
+                                    </Typography>
+                                    <Typography
+                                        variant="body2"
+                                        color="success.main"
+                                        className="status"
+                                        sx={{
+                                            fontSize: "0.8rem",
+                                            transition: "color 0.2s ease-in-out",
+                                        }}
+                                    >
+                                        Online
+                                    </Typography>
+                                </Box>
+                            </UserProfileSection>
                         </Stack>
+
                         <Stack direction="row">
                             <StyledTooltip title="Configurations">
                                 <IconButton
@@ -257,6 +328,18 @@ export const Sidebar = ({
             >
                 {drawerContent}
             </StyledDrawer>
+
+            <UserProfileDialog
+                user={user}
+                isOpen={isProfileDialogOpen}
+                onClose={() => setProfileDialogOpen(false)}
+                onStartDirectMessage={(user) => {
+                    // TODO
+                    console.log("Start direct message with", user.username);
+                    setProfileDialogOpen(false);
+                }}
+                onUpdateProfile={onUpdateProfile}
+            />
 
             <Dialog
                 open={showRoomModal}
