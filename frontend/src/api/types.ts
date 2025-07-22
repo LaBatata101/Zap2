@@ -1,7 +1,13 @@
 export type User = {
     id: number;
     username: string;
-    is_admin: boolean;
+    is_superuser: boolean;
+    profile: UserProfile;
+};
+
+export type UserProfile = {
+    bio: string;
+    avatar_img?: string;
 };
 
 export type Media = {
