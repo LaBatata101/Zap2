@@ -224,7 +224,7 @@ export const MessageInput = ({
                     style={{ display: "none" }}
                     onChange={handleFileChange}
                     multiple
-                    accept="image/*,video/*"
+                    accept="image/*"
                 />
                 <TextField
                     ref={textFieldRef}

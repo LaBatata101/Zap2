@@ -85,10 +85,7 @@ export const ChatArea = ({
                     }}
                 />
                 <Typography variant="h5" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
-                    Select a room to start chatting
-                </Typography>
-                <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
-                    Choose a room from the sidebar to begin your conversation
+                    Select a chat to start messaging
                 </Typography>
             </Box>
         );
