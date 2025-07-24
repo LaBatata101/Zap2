@@ -161,7 +161,7 @@ function chatReducer(state: ChatState, action: ChatAction) {
         case ChatActionType.SetMessages:
             return {
                 ...state,
-                messages: [...action.payload.messages, ...state.messages],
+                messages: [...action.payload.messages.slice().reverse(), ...state.messages],
                 nextMessagesUrl: action.payload.next,
                 hasMoreMessages: action.payload.hasMore,
             };
