@@ -14,6 +14,7 @@ import {
 import { formatDate } from "../helpers/format";
 import { Message, MessageSequenceType } from "./message";
 import { ContentCopy, KeyboardArrowDown, Reply } from "@mui/icons-material";
+import { UserProfileDialog } from "./user_profile_dialog";
 
 type ContextMenuState = {
     mouseX: number;
@@ -58,6 +59,8 @@ export const MessageList = memo(
         const scrollContainerRef = useRef<HTMLDivElement>(null);
         const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
         const [showScrollButton, setShowScrollButton] = useState(false);
+        const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+        const [profileDialogData, setProfileDialogData] = useState<types.User | null>(null);
         const firstUnreadRef = useRef<HTMLDivElement>(null);
         const prevMessagesLength = useRef(0);
 
@@ -222,6 +225,11 @@ export const MessageList = memo(
             );
         }, []);
 
+        const handleUserProfileDialog = useCallback((user: types.User) => {
+            setIsProfileDialogOpen(true);
+            setProfileDialogData(user);
+        }, []);
+
         const handleClose = () => {
             setContextMenu(null);
         };
@@ -334,6 +342,7 @@ export const MessageList = memo(
                                 currentUser={currentUser}
                                 sequenceType={sequenceType}
                                 onCtxMenu={handleContextMenu}
+                                onProfileView={handleUserProfileDialog}
                                 onReplyClick={onReplyClick}
                                 isHighlighted={highlightedMessageId === message.id}
                             />
@@ -409,6 +418,18 @@ export const MessageList = memo(
                         <ListItemText sx={{ color: "text.primary" }}>Copy Text</ListItemText>
                     </MenuItem>
                 </Menu>
+                {profileDialogData && (
+                    <UserProfileDialog
+                        user={profileDialogData}
+                        isOpen={isProfileDialogOpen}
+                        renderEditBtn={false}
+                        onUpdateProfile={null}
+                        onClose={() => {
+                            setIsProfileDialogOpen(false);
+                        }}
+                        onStartDirectMessage={() => console.log("TODO")}
+                    />
+                )}
             </Box>
         );
     },

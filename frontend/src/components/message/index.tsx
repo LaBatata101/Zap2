@@ -14,6 +14,7 @@ type MessageProps = {
     currentUser: types.User;
     sequenceType: MessageSequenceType;
     onCtxMenu: (event: React.MouseEvent, message: types.Message) => void;
+    onProfileView: (user: types.User) => void;
     onReplyClick: (messageId: number) => void;
     isHighlighted: boolean;
 };
@@ -26,6 +27,7 @@ export const Message = memo(
         currentUser,
         sequenceType,
         onCtxMenu,
+        onProfileView,
         onReplyClick,
         isHighlighted,
     }: MessageProps) => {
@@ -116,40 +118,48 @@ export const Message = memo(
                         minWidth: 0,
                     }}
                 >
-                    {showAvatar &&
-                        (message.user.profile.avatar_img ? (
-                            <Avatar
-                                sx={{
-                                    width: avatarSize,
-                                    height: avatarSize,
-                                }}
-                            >
-                                <img
-                                    src={message.user.profile.avatar_img}
-                                    alt="User Avatar"
-                                    style={{
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit: "cover",
-                                        borderRadius: "50%",
+                    {showAvatar && (
+                        <Box
+                            onClick={() => {
+                                onProfileView(message.user);
+                            }}
+                            sx={{ cursor: "pointer" }}
+                        >
+                            {message.user.profile.avatar_img ? (
+                                <Avatar
+                                    sx={{
+                                        width: avatarSize,
+                                        height: avatarSize,
                                     }}
-                                />
-                            </Avatar>
-                        ) : (
-                            <Avatar
-                                sx={{
-                                    background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-                                    width: avatarSize,
-                                    height: avatarSize,
-                                    flexShrink: 0,
-                                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
-                                    fontWeight: 600,
-                                    fontSize: "0.875rem",
-                                }}
-                            >
-                                {message.user.username.charAt(0).toUpperCase()}
-                            </Avatar>
-                        ))}
+                                >
+                                    <img
+                                        src={message.user.profile.avatar_img}
+                                        alt="User Avatar"
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "cover",
+                                            borderRadius: "50%",
+                                        }}
+                                    />
+                                </Avatar>
+                            ) : (
+                                <Avatar
+                                    sx={{
+                                        background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                        width: avatarSize,
+                                        height: avatarSize,
+                                        flexShrink: 0,
+                                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                                        fontWeight: 600,
+                                        fontSize: "0.875rem",
+                                    }}
+                                >
+                                    {message.user.username.charAt(0).toUpperCase()}
+                                </Avatar>
+                            )}
+                        </Box>
+                    )}
 
                     <Box
                         sx={{

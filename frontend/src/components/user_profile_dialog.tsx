@@ -161,24 +161,30 @@ const UploadIcon = styled(CloudUpload)(({ theme }) => ({
     },
 }));
 
-export const UserProfileDialog = ({
-    user,
-    isOpen,
-    onClose,
-    onStartDirectMessage,
-    onUpdateProfile,
-}: {
+type UserProfileDialogProps = {
     user: User;
     isOpen: boolean;
+    renderEditBtn: boolean;
     onClose: () => void;
     onStartDirectMessage: (user: User) => void;
-    onUpdateProfile: (
+    onUpdateProfile:
+    | ((
         username: string,
         bio: string,
         avatar: File | null,
         cropAvatarData: CropAvatarData | null,
-    ) => Promise<boolean>;
-}) => {
+    ) => Promise<boolean>)
+    | null;
+};
+
+export const UserProfileDialog = ({
+    user,
+    isOpen,
+    renderEditBtn,
+    onClose,
+    onStartDirectMessage,
+    onUpdateProfile,
+}: UserProfileDialogProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const [username, setUsername] = useState(user.username);
     const [bio, setBio] = useState(user.profile?.bio || "");
@@ -322,7 +328,7 @@ export const UserProfileDialog = ({
         setError(null);
 
         try {
-            setSuccess(await onUpdateProfile(username.trim(), bio.trim(), avatar, cropData));
+            setSuccess(await onUpdateProfile!(username.trim(), bio.trim(), avatar, cropData));
             setIsEditing(false);
         } catch (error: any) {
             setError(error.message || "Failed to update profile");
@@ -576,13 +582,15 @@ export const UserProfileDialog = ({
                     </>
                 ) : (
                     <>
-                        <ActionButton
-                            onClick={() => setIsEditing(true)}
-                            startIcon={<Edit />}
-                            sx={{ color: "primary.main" }}
-                        >
-                            Edit Profile
-                        </ActionButton>
+                        {renderEditBtn && (
+                            <ActionButton
+                                onClick={() => setIsEditing(true)}
+                                startIcon={<Edit />}
+                                sx={{ color: "primary.main" }}
+                            >
+                                Edit Profile
+                            </ActionButton>
+                        )}
                         <ActionButton
                             onClick={() => onStartDirectMessage(user)}
                             variant="contained"

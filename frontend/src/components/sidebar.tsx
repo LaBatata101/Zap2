@@ -332,6 +332,7 @@ export const Sidebar = ({
             <UserProfileDialog
                 user={user}
                 isOpen={isProfileDialogOpen}
+                renderEditBtn={true}
                 onClose={() => setProfileDialogOpen(false)}
                 onStartDirectMessage={(user) => {
                     // TODO
