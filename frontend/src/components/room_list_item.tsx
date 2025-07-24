@@ -78,8 +78,7 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                                 color="text.secondary"
                                 sx={{ fontSize: "0.75rem" }}
                             >
-                                {room.last_message_timestamp &&
-                                    formatTime(room.last_message_timestamp)}
+                                {room.last_message && formatTime(room.last_message.timestamp)}
                             </Typography>
                         </Box>
                     }
@@ -89,21 +88,31 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                             alignItems="center"
                             sx={{ width: "100%", pr: room.unread_count > 0 ? 1 : 0 }}
                         >
-                            <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                sx={{
-                                    flex: 1,
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    minWidth: 0,
-                                    mr: room.unread_count > 0 ? 1 : 0,
-                                    fontSize: "0.85rem",
-                                }}
-                            >
-                                {room.last_message}
-                            </Typography>
+                            {room.last_message && (
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        flex: 1,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                        minWidth: 0,
+                                        mr: room.unread_count > 0 ? 1 : 0,
+                                        fontSize: "0.85rem",
+                                    }}
+                                >
+                                    <Box
+                                        component="span"
+                                        sx={{ color: "primary.light", fontWeight: 500 }}
+                                    >
+                                        {room.last_message.username}:
+                                    </Box>
+                                    <Box component="span" sx={{ color: "text.secondary" }}>
+                                        {" "}
+                                        {room.last_message.message}
+                                    </Box>
+                                </Typography>
+                            )}
                             {room.unread_count > 0 && (
                                 <Box sx={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
                                     <Badge

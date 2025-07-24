@@ -35,8 +35,7 @@ export type MessagePayload = {
 export type ChatRoom = {
     id: number;
     name: string;
-    last_message?: string;
-    last_message_timestamp?: string;
+    last_message?: { username: string; message: string; timestamp: string };
     unread_count: number;
 };
 

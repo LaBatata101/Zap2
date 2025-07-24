@@ -126,8 +126,11 @@ function chatReducer(state: ChatState, action: ChatAction) {
                 room.id === message.room
                     ? {
                         ...room,
-                        last_message: message.content,
-                        last_message_timestamp: message.timestamp,
+                        last_message: {
+                            username: message.user.username,
+                            message: message.content,
+                            timestamp: message.timestamp,
+                        },
                         unread_count:
                             currentRoom?.id === message.room
                                 ? room.unread_count

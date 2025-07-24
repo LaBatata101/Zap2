@@ -148,7 +148,6 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
     owner = serializers.ReadOnlyField(source="owner.username")
     members = serializers.StringRelatedField(many=True, read_only=True)
     last_message = serializers.SerializerMethodField()
-    last_message_timestamp = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -160,7 +159,6 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
             "owner",
             "members",
             "last_message",
-            "last_message_timestamp",
             "unread_count",
         )
 
@@ -169,17 +167,16 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
         if not last_message:
             return None
 
+        content = ""
         media_exists = last_message.media.exists()
         if media_exists and last_message.content:
-            return f"📷 {last_message.content}"
+            content = f"📷 {last_message.content}"
         elif media_exists:
-            return "📷 Media"
+            content = "📷 Media"
         else:
-            return last_message.content
+            content = last_message.content
 
-    def get_last_message_timestamp(self, obj):
-        last_message = obj.messages.last()
-        return last_message.timestamp if last_message else None
+        return {"username": last_message.user.username, "message": content, "timestamp": last_message.timestamp}
 
     def get_unread_count(self, obj: ChatRoom) -> int:
         user = self.context["request"].user
