@@ -18,7 +18,7 @@ type MessageProps = {
     isHighlighted: boolean;
 };
 
-const avatarSize = 32;
+const avatarSize = 40;
 
 export const Message = memo(
     ({

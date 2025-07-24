@@ -52,6 +52,8 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                             boxShadow: isSelected
                                 ? "0 4px 12px rgba(59, 130, 246, 0.4)"
                                 : "0 2px 8px rgba(0, 0, 0, 0.2)",
+                            width: 48,
+                            height: 48,
                             transition: "box-shadow 0.2s ease-in-out",
                         }}
                     >
