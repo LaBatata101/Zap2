@@ -36,7 +36,7 @@ import { ImageCropEditor } from "./image_crop_editor";
 // Styled components for better visual hierarchy
 const StyledDialog = styled(Dialog)(({ theme }) => ({
     "& .MuiDialog-paper": {
-        borderRadius: 16,
+        borderRadius: 10,
         backgroundColor: theme.palette.background.paper,
         backgroundImage:
             "linear-gradient(135deg, rgba(59, 130, 246, 0.02) 0%, rgba(139, 92, 246, 0.02) 100%)",
@@ -353,7 +353,7 @@ export const UserProfileDialog = ({
             open={isOpen}
             onClose={onClose}
             fullWidth
-            maxWidth="sm"
+            maxWidth="xs"
             slots={{ transition: Fade }}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -560,7 +560,9 @@ export const UserProfileDialog = ({
                 </Stack>
             </DialogContent>
 
-            <DialogActions sx={{ p: 3, pt: 2, gap: 1 }}>
+            <DialogActions
+                sx={{ p: 3, pt: 2, justifyContent: renderEditBtn ? "space-between" : "center" }}
+            >
                 {isEditing ? (
                     <>
                         <ActionButton
