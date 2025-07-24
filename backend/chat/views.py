@@ -6,9 +6,8 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.utils import timezone
-from rest_framework import generics, permissions, status, views, viewsets
+from rest_framework import permissions, status, views, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -16,8 +15,7 @@ from rest_framework.response import Response
 from .models import ChatRoom, Membership, Message, MessageMedia
 from .permissions import IsOwnerOrReadOnly, UserPermissions
 from .serializers import (ChatRoomSerializer, MessageMediaSerializer,
-                          MessageSerializer, RegisterSerializer,
-                          UserSerializer)
+                          MessageSerializer, UserSerializer)
 
 
 def get_csrf(request):
@@ -36,7 +34,7 @@ class UserViewSet(viewsets.ModelViewSet[User]):
         url_path=r"exists/(?P<username>[^/.]+)",
         permission_classes=[permissions.AllowAny],
     )
-    def exists(self, request, username=None):
+    def exists(self, _, username=None):
         return (
             Response(status=status.HTTP_200_OK)
             if User.objects.filter(username=username).exists()
@@ -125,7 +123,7 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
                 room = ChatRoom.objects.get(id=room_id)
                 if not room.is_private:
                     # For public rooms, create membership if it doesn’t exist
-                    membership, created = Membership.objects.get_or_create(user=request.user, room=room)
+                    membership = Membership.objects.get(user=request.user, room=room)
                     membership.last_read_timestamp = timezone.now()
                     membership.save()
                 else:
