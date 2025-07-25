@@ -9,7 +9,7 @@ from django.dispatch import receiver
 @final
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    bio = models.TextField(max_length=128, blank=True)
+    bio = models.TextField(max_length=140, blank=True)
     avatar_img = models.ImageField(null=True, blank=True)
 
     def __str__(self):
@@ -27,7 +27,7 @@ class Membership(models.Model):
 
 @final
 class ChatRoom(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=100, unique=True)
     is_private = models.BooleanField(default=False)
     owner = models.ForeignKey(User, related_name="owned_rooms", on_delete=models.SET_NULL, null=True, blank=True)
     members = models.ManyToManyField(User, related_name="chat_rooms", blank=True, through=Membership)
