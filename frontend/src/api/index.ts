@@ -7,6 +7,7 @@ import {
     MessagePayload,
     PaginatedResponse,
     RegistrationCredentials,
+    User,
 } from "./types";
 
 export const baseURL = "http://localhost:8000";
@@ -160,10 +161,51 @@ export class APIService {
         return response.data;
     }
 
+    async updateRoom(
+        roomId: number,
+        updatedRoom: {
+            name: string;
+            description: string;
+            avatar_img: File | null;
+            crop_avatar_data: CropAvatarData | null;
+        },
+    ) {
+        const formData = new FormData();
+        formData.append("name", updatedRoom.name);
+        formData.append("description", updatedRoom.description);
+
+        if (updatedRoom.avatar_img) {
+            formData.append("avatar_img", updatedRoom.avatar_img, updatedRoom.avatar_img.name);
+            if (updatedRoom.crop_avatar_data) {
+                const cropData = updatedRoom.crop_avatar_data;
+                formData.append("crop_x", cropData.x.toString());
+                formData.append("crop_y", cropData.y.toString());
+                formData.append("crop_size", cropData.cropSize.toString());
+                formData.append("crop_scale", cropData.scale.toString());
+                formData.append("crop_container_width", cropData.containerWidth.toString());
+                formData.append("crop_container_height", cropData.containerHeight.toString());
+            }
+        }
+
+        return this.request(
+            `/rooms/${roomId}/`,
+            {
+                method: "PATCH",
+                body: formData,
+            },
+            true,
+        );
+    }
+
     // User methods
     async checkIfUserExists(username: string): Promise<boolean> {
         const response = await this.request(`/user/exists/${username}/`);
         return response.status === 200;
+    }
+
+    async getUser(username: string): Promise<User> {
+        const response = await this.request(`/user/${username}`);
+        return response.data;
     }
 
     async updateUserInfo(

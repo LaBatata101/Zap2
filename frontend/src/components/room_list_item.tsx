@@ -46,19 +46,25 @@ export const RoomListItem = memo(({ room, isSelected, onSelect }: RoomListItemPr
                 }}
             >
                 <ListItemAvatar>
-                    <Avatar
-                        sx={{
-                            background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-                            boxShadow: isSelected
-                                ? "0 4px 12px rgba(59, 130, 246, 0.4)"
-                                : "0 2px 8px rgba(0, 0, 0, 0.2)",
-                            width: 48,
-                            height: 48,
-                            transition: "box-shadow 0.2s ease-in-out",
-                        }}
-                    >
-                        {room.name.charAt(0).toUpperCase()}
-                    </Avatar>
+                    {room.avatar_img ? (
+                        <Avatar sx={{ width: 48, height: 48 }}>
+                            <img src={room.avatar_img} alt="Group avatar image" />
+                        </Avatar>
+                    ) : (
+                        <Avatar
+                            sx={{
+                                background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                boxShadow: isSelected
+                                    ? "0 4px 12px rgba(59, 130, 246, 0.4)"
+                                    : "0 2px 8px rgba(0, 0, 0, 0.2)",
+                                width: 48,
+                                height: 48,
+                                transition: "box-shadow 0.2s ease-in-out",
+                            }}
+                        >
+                            {room.name.charAt(0).toUpperCase()}
+                        </Avatar>
+                    )}
                 </ListItemAvatar>
                 <ListItemText
                     primary={

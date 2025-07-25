@@ -24,7 +24,7 @@ enum ChatActionType {
     SelectRoom,
     SetMessages,
     SetRooms,
-    UpdatedRoomMetadata,
+    UpdateRoom,
     ResetUnreadCount,
     SetConnectionStatus,
     SetSearchTerm,
@@ -56,27 +56,27 @@ type ChatState = {
 
 type ChatAction =
     | {
-        type:
-        | ChatActionType.LoginStart
-        | ChatActionType.RegistrationStart
-        | ChatActionType.Logout
-        | ChatActionType.Error;
-    }
+          type:
+              | ChatActionType.LoginStart
+              | ChatActionType.RegistrationStart
+              | ChatActionType.Logout
+              | ChatActionType.Error;
+      }
     | {
-        type: ChatActionType.SetUser | ChatActionType.RegistrationSuccess;
-        payload: { user: User };
-    }
+          type: ChatActionType.SetUser | ChatActionType.RegistrationSuccess;
+          payload: { user: User };
+      }
     | { type: ChatActionType.SelectRoom; payload: ChatRoom }
     | {
-        type: ChatActionType.SetMessages;
-        payload: { messages: Message[]; next: string | null; hasMore: boolean };
-    }
+          type: ChatActionType.SetMessages;
+          payload: { messages: Message[]; next: string | null; hasMore: boolean };
+      }
     | { type: ChatActionType.SetRooms; payload: ChatRoom[] }
     | { type: ChatActionType.SetConnectionStatus; payload: ConnectionStatus }
     | { type: ChatActionType.SetSearchTerm; payload: string }
     | { type: ChatActionType.SetMessagesLoading; payload: boolean }
     | { type: ChatActionType.SetHighlightedMessage; payload?: number }
-    | { type: ChatActionType.UpdatedRoomMetadata; payload: Message }
+    | { type: ChatActionType.UpdateRoom; payload: ChatRoom }
     | { type: ChatActionType.ResetUnreadCount; payload: number }
     | { type: ChatActionType.ReceiveMessage; payload: Message };
 
@@ -125,17 +125,17 @@ function chatReducer(state: ChatState, action: ChatAction) {
             const updatedRooms = rooms.map((room) =>
                 room.id === message.room
                     ? {
-                        ...room,
-                        last_message: {
-                            username: message.user.username,
-                            message: message.content,
-                            timestamp: message.timestamp,
-                        },
-                        unread_count:
-                            currentRoom?.id === message.room
-                                ? room.unread_count
-                                : room.unread_count + 1,
-                    }
+                          ...room,
+                          last_message: {
+                              username: message.user.username,
+                              message: message.content,
+                              timestamp: message.timestamp,
+                          },
+                          unread_count:
+                              currentRoom?.id === message.room
+                                  ? room.unread_count
+                                  : room.unread_count + 1,
+                      }
                     : room,
             );
 
@@ -173,7 +173,19 @@ function chatReducer(state: ChatState, action: ChatAction) {
             return { ...state, highlightedMessageId: action.payload };
         case ChatActionType.SetMessagesLoading:
             return { ...state, messagesLoading: action.payload };
+        case ChatActionType.UpdateRoom:
+            return {
+                ...state,
+                rooms: state.rooms.map((room) =>
+                    room.id === action.payload.id ? action.payload : room,
+                ),
+                currentRoom:
+                    state.currentRoom?.id === action.payload.id
+                        ? action.payload
+                        : state.currentRoom,
+            };
         default:
+            //@ts-ignore
             throw new Error(`Unhandled action type: ${action.type}`);
     }
 }
@@ -410,6 +422,31 @@ export const ChatApp = () => {
         }
     };
 
+    const handleUpdateRoom = async (
+        roomId: number,
+        name: string,
+        description: string,
+        avatar: File | null,
+        cropAvatarData: CropAvatarData | null,
+    ) => {
+        try {
+            const response = await apiService.current.updateRoom(roomId, {
+                name,
+                description,
+                avatar_img: avatar,
+                crop_avatar_data: cropAvatarData,
+            });
+
+            if (response.status === 200) {
+                dispatch({ type: ChatActionType.UpdateRoom, payload: response.data });
+                return true;
+            }
+        } catch (error) {
+            console.error("Failed to update room:", error);
+        }
+        return false;
+    };
+
     const handleCancelReply = useCallback(() => {
         setReplyingTo(null);
     }, []);
@@ -437,6 +474,14 @@ export const ChatApp = () => {
             console.error("Failed to update user info: ", error);
         }
         return false;
+    };
+
+    const loadGroupMembers = async (members: string[]) => {
+        return await Promise.all(
+            members.map((member) => {
+                return apiService.current.getUser(member);
+            }),
+        );
     };
 
     if (!user) {
@@ -497,6 +542,8 @@ export const ChatApp = () => {
                         onFetchMoreMessages={fetchMoreMessages}
                         hasMoreMessages={hasMoreMessages}
                         messagesLoading={messagesLoading}
+                        onUpdateRoom={handleUpdateRoom}
+                        onLoadMembers={loadGroupMembers}
                     />
                 </Box>
             </Box>

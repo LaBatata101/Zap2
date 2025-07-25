@@ -14,7 +14,8 @@ import {
 import { formatDate } from "../helpers/format";
 import { Message, MessageSequenceType } from "./message";
 import { ContentCopy, KeyboardArrowDown, Reply } from "@mui/icons-material";
-import { UserProfileDialog } from "./user_profile_dialog";
+import { UserProfileDialog } from "./dialog/user_profile_dialog";
+import { DialogMode } from "./dialog/common";
 
 type ContextMenuState = {
     mouseX: number;
@@ -217,10 +218,10 @@ export const MessageList = memo(
             setContextMenu(
                 contextMenu === null
                     ? {
-                        mouseX: event.clientX - 2,
-                        mouseY: event.clientY - 4,
-                        message: message,
-                    }
+                          mouseX: event.clientX - 2,
+                          mouseY: event.clientY - 4,
+                          message: message,
+                      }
                     : null,
             );
         }, []);
@@ -422,7 +423,7 @@ export const MessageList = memo(
                     <UserProfileDialog
                         user={profileDialogData}
                         isOpen={isProfileDialogOpen}
-                        renderEditBtn={false}
+                        mode={DialogMode.View}
                         onUpdateProfile={null}
                         onClose={() => {
                             setIsProfileDialogOpen(false);

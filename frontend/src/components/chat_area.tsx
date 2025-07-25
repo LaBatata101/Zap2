@@ -1,11 +1,8 @@
-import { useState } from "react";
 import * as types from "../api/types";
 import { ConnectionStatus } from "../pages/chat";
 import {
     Box,
     Typography,
-    Menu,
-    MenuItem,
     Avatar,
     Stack,
     IconButton,
@@ -14,9 +11,12 @@ import {
     useTheme,
     useMediaQuery,
 } from "@mui/material";
-import { Message as MessageIcon, MoreVert, Menu as MenuIcon } from "@mui/icons-material";
+import { Message as MessageIcon, Menu as MenuIcon } from "@mui/icons-material";
 import { MessageList } from "./message_list";
 import { MessageInput } from "./message_input";
+import { useState } from "react";
+import { RoomDetailsDialog } from "./dialog/chat_group_details_dialog";
+import { DialogMode } from "./dialog/common";
 
 type ChatAreaProps = {
     currentRoom?: types.ChatRoom;
@@ -33,6 +33,14 @@ type ChatAreaProps = {
     onFetchMoreMessages: () => void;
     hasMoreMessages: boolean;
     messagesLoading: boolean;
+    onUpdateRoom: (
+        roomId: number,
+        name: string,
+        description: string,
+        avatar: File | null,
+        cropAvatarData: types.CropAvatarData | null,
+    ) => Promise<boolean>;
+    onLoadMembers: (members: string[]) => Promise<types.User[]>;
 };
 
 export const ChatArea = ({
@@ -50,8 +58,9 @@ export const ChatArea = ({
     onFetchMoreMessages,
     hasMoreMessages,
     messagesLoading,
+    onUpdateRoom,
+    onLoadMembers,
 }: ChatAreaProps) => {
-    const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
     const isConnected = connectionStatus === ConnectionStatus.Connected;
@@ -59,6 +68,7 @@ export const ChatArea = ({
         currentRoom && currentRoom.unread_count > 0
             ? Math.max(0, messages.length - currentRoom.unread_count)
             : null;
+    const [isRoomDetailsOpen, setRoomDetailsOpen] = useState(false);
 
     if (!currentRoom) {
         return (
@@ -104,70 +114,61 @@ export const ChatArea = ({
                 }}
             >
                 <Toolbar sx={{ minHeight: "64px !important" }}>
-                    {isMobile && (
-                        <IconButton
-                            color="inherit"
-                            aria-label="open drawer"
-                            edge="start"
-                            onClick={onMenuClick}
-                            sx={{
-                                mr: 2,
-                                color: "text.secondary",
-                                "&:hover": {
-                                    color: "primary.main",
-                                    backgroundColor: "rgba(59, 130, 246, 0.1)",
-                                },
-                            }}
+                    <Box
+                        onClick={() => setRoomDetailsOpen(true)}
+                        sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            flexGrow: 1,
+                            borderRadius: 2,
+                            p: 1,
+                            m: -1,
+                            transition: "background-color 0.2s",
+                            "&:hover": { backgroundColor: "action.hover" },
+                        }}
+                    >
+                        {isMobile && (
+                            <IconButton
+                                color="inherit"
+                                aria-label="open drawer"
+                                edge="start"
+                                onClick={onMenuClick}
+                                sx={{
+                                    mr: 2,
+                                    color: "text.secondary",
+                                    "&:hover": {
+                                        color: "primary.main",
+                                        backgroundColor: "rgba(59, 130, 246, 0.1)",
+                                    },
+                                }}
+                            >
+                                <MenuIcon />
+                            </IconButton>
+                        )}
+                        {currentRoom.avatar_img ? (
+                            <Avatar sx={{ mr: 2 }}>
+                                <img src={currentRoom.avatar_img} alt="Group avatar image" />
+                            </Avatar>
+                        ) : (
+                            <Avatar
+                                sx={{
+                                    mr: 2,
+                                    background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
+                                }}
+                            >
+                                {currentRoom.name.charAt(0).toUpperCase()}
+                            </Avatar>
+                        )}
+                        <Typography
+                            variant="h6"
+                            color="text.primary"
+                            sx={{ flexGrow: 1, fontWeight: 600 }}
                         >
-                            <MenuIcon />
-                        </IconButton>
-                    )}
-                    <Avatar
-                        sx={{
-                            mr: 2,
-                            background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-                            boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-                        }}
-                    >
-                        {currentRoom.name.charAt(0).toUpperCase()}
-                    </Avatar>
-                    <Typography
-                        variant="h6"
-                        color="text.primary"
-                        sx={{ flexGrow: 1, fontWeight: 600 }}
-                    >
-                        {currentRoom.name}
-                    </Typography>
-                    <IconButton
-                        onClick={(e) => setMenuAnchor(e.currentTarget)}
-                        sx={{
-                            color: "text.secondary",
-                            "&:hover": {
-                                color: "primary.main",
-                                backgroundColor: "rgba(59, 130, 246, 0.1)",
-                            },
-                        }}
-                    >
-                        <MoreVert />
-                    </IconButton>
-                    <Menu
-                        anchorEl={menuAnchor}
-                        open={Boolean(menuAnchor)}
-                        onClose={() => setMenuAnchor(null)}
-                        slotProps={{
-                            paper: {
-                                sx: {
-                                    bgcolor: "background.paper",
-                                    border: "1px solid #374151",
-                                    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
-                                },
-                            },
-                        }}
-                    >
-                        <MenuItem>Room Info</MenuItem>
-                        <MenuItem>Members</MenuItem>
-                        <MenuItem>Configurations</MenuItem>
-                    </Menu>
+                            {currentRoom.name}
+                        </Typography>
+                    </Box>
                 </Toolbar>
             </AppBar>
 
@@ -189,6 +190,17 @@ export const ChatArea = ({
                 replyingTo={replyingTo}
                 onCancelReply={onCancelReply}
             />
+
+            {currentRoom && (
+                <RoomDetailsDialog
+                    room={currentRoom}
+                    isOpen={isRoomDetailsOpen}
+                    mode={currentRoom.owner === user.username ? DialogMode.Edit : DialogMode.View}
+                    onUpdateRoom={onUpdateRoom}
+                    onClose={() => setRoomDetailsOpen(false)}
+                    onLoadMembers={onLoadMembers}
+                />
+            )}
         </Stack>
     );
 };

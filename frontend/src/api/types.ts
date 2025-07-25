@@ -35,8 +35,13 @@ export type MessagePayload = {
 export type ChatRoom = {
     id: number;
     name: string;
+    owner: string;
     last_message?: { username: string; message: string; timestamp: string };
     unread_count: number;
+    avatar_img?: string;
+    is_private: boolean;
+    description: string;
+    members: string[];
 };
 
 export type LoginCredentials = {

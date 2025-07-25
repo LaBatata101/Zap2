@@ -21,7 +21,8 @@ import {
 import { Logout, Settings, Add, Search, Person } from "@mui/icons-material";
 import { StyledTooltip } from "./styled";
 import { RoomListItem } from "./room_list_item";
-import { UserProfileDialog } from "./user_profile_dialog";
+import { UserProfileDialog } from "./dialog/user_profile_dialog";
+import { DialogMode } from "./dialog/common";
 
 export const sidebarWidth = 320;
 
@@ -332,7 +333,7 @@ export const Sidebar = ({
             <UserProfileDialog
                 user={user}
                 isOpen={isProfileDialogOpen}
-                renderEditBtn={true}
+                mode={DialogMode.Edit}
                 onClose={() => setProfileDialogOpen(false)}
                 onStartDirectMessage={(user) => {
                     // TODO
@@ -348,12 +349,12 @@ export const Sidebar = ({
                 fullWidth
                 maxWidth="xs"
             >
-                <DialogTitle>Create New Room</DialogTitle>
+                <DialogTitle>Create New Group</DialogTitle>
                 <DialogContent>
                     <TextField
                         autoFocus
                         margin="dense"
-                        label="Room Name"
+                        label="Group Name"
                         type="text"
                         fullWidth
                         variant="standard"
