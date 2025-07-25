@@ -155,12 +155,19 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
         fields = (
             "id",
             "name",
+            "description",
+            "avatar_img",
             "is_private",
             "owner",
             "members",
             "last_message",
             "unread_count",
         )
+
+    def validate_avatar_img(self, value):
+        if value.size > 5 * 1024 * 1024:  # 5MB
+            raise serializers.ValidationError("File exceeded the 5MB limit.")
+        return value
 
     def get_last_message(self, obj):
         last_message = obj.messages.last()
@@ -189,6 +196,31 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
             return Message.objects.filter(room=obj, timestamp__gt=last_read).exclude(user=user).count()
         except Membership.DoesNotExist:
             return 0
+
+    @override
+    def update(self, instance, validated_data):
+        instance.name = validated_data.get("name", instance.name)
+        instance.description = validated_data.get("description", instance.description)
+
+        request = self.context.get("request")
+        avatar_img_file = validated_data.get("avatar_img")
+
+        if avatar_img_file and request:
+            if "crop_x" in request.data:
+                crop_data = {
+                    "x": float(request.data.get("crop_x")),
+                    "y": float(request.data.get("crop_y")),
+                    "scale": float(request.data.get("crop_scale")),
+                    "crop_size": int(request.data.get("crop_size")),
+                    "container_width": int(request.data.get("crop_container_width")),
+                    "container_height": int(request.data.get("crop_container_height")),
+                }
+                instance.avatar_img = crop_avatar_img(avatar_img_file, f"room_avatar_{instance.id}", crop_data)
+            else:
+                instance.avatar_img = avatar_img_file
+
+        instance.save()
+        return instance
 
 
 class RegisterSerializer(serializers.ModelSerializer[User]):

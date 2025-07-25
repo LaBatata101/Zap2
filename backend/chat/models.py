@@ -28,6 +28,8 @@ class Membership(models.Model):
 @final
 class ChatRoom(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(max_length=140, blank=True)
+    avatar_img = models.ImageField(null=True, blank=True)
     is_private = models.BooleanField(default=False)
     owner = models.ForeignKey(User, related_name="owned_rooms", on_delete=models.SET_NULL, null=True, blank=True)
     members = models.ManyToManyField(User, related_name="chat_rooms", blank=True, through=Membership)

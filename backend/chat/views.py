@@ -8,7 +8,7 @@ from django.middleware.csrf import get_token
 from django.utils import timezone
 from rest_framework import permissions, status, views, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -70,6 +70,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet[ChatRoom]):
     queryset = ChatRoom.objects.all()
     serializer_class = ChatRoomSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
         user = self.request.user
