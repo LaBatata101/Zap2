@@ -81,11 +81,9 @@ export const Message = memo(
                 }
             } else {
                 switch (sequenceType) {
-                    case "first":
-                        return `${borderRadius} ${borderRadius} ${borderRadius} ${sharpRadius}`;
                     case "single":
                     case "last":
-                        return `${sharpRadius} ${borderRadius} ${borderRadius} ${borderRadius}`;
+                        return `${borderRadius} ${borderRadius} ${borderRadius} ${sharpRadius}`;
                     default:
                         return borderRadius;
                 }
@@ -249,8 +247,8 @@ export const Message = memo(
 
                             <Box
                                 sx={{
-                                    px: hasMedia && !hasContent ? 0.5 : 1,
-                                    py: hasMedia && !hasContent ? 0.5 : 1,
+                                    px: hasMedia && !hasContent ? 0.5 : 0.75,
+                                    py: 0.5,
                                     borderRadius: getBorderRadius(),
                                     color: isOwnMessage ? "common.white" : "text.primary",
                                     bgcolor: isOwnMessage ? "primary.main" : "background.paper",
@@ -260,7 +258,8 @@ export const Message = memo(
                                     marginLeft: needsPadding ? `${avatarSize + 8}px` : undefined,
                                     wordBreak: "break-word",
                                     overflowWrap: "break-word",
-                                    minWidth: hasMedia && !hasContent ? "auto" : "120px",
+                                    minWidth: hasMedia && !hasContent ? "auto" : "80px",
+                                    maxWidth: "fit-content",
                                     boxShadow: isOwnMessage
                                         ? "0 2px 8px rgba(59, 130, 246, 0.2)"
                                         : "0 2px 8px rgba(0, 0, 0, 0.1)",
@@ -371,7 +370,7 @@ export const Message = memo(
                                         display: "flex",
                                         justifyContent: "flex-end",
                                         px: hasMedia && !hasContent ? 1.5 : 0,
-                                        mt: hasContent || hasMedia ? 0.5 : 0,
+                                        mt: hasContent || hasMedia ? 0.1 : 0,
                                     }}
                                 >
                                     <Typography
