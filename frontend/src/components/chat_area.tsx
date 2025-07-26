@@ -132,6 +132,27 @@ export const ChatArea = ({
                 }}
             >
                 <Toolbar sx={{ minHeight: "64px !important" }}>
+                    {isMobile && (
+                        <IconButton
+                            color="inherit"
+                            aria-label="open drawer"
+                            edge="start"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onMenuClick();
+                            }}
+                            sx={{
+                                mr: 2,
+                                color: "text.secondary",
+                                "&:hover": {
+                                    color: "primary.main",
+                                    backgroundColor: "rgba(59, 130, 246, 0.1)",
+                                },
+                            }}
+                        >
+                            <MenuIcon />
+                        </IconButton>
+                    )}
                     <Box
                         onClick={handleHeaderClick}
                         sx={{
@@ -142,31 +163,11 @@ export const ChatArea = ({
                             borderRadius: 2,
                             p: 1,
                             m: -1,
+                            ml: isMobile ? 0 : -1,
                             transition: "background-color 0.2s",
                             "&:hover": { backgroundColor: "action.hover" },
                         }}
                     >
-                        {isMobile && (
-                            <IconButton
-                                color="inherit"
-                                aria-label="open drawer"
-                                edge="start"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onMenuClick();
-                                }}
-                                sx={{
-                                    mr: 2,
-                                    color: "text.secondary",
-                                    "&:hover": {
-                                        color: "primary.main",
-                                        backgroundColor: "rgba(59, 130, 246, 0.1)",
-                                    },
-                                }}
-                            >
-                                <MenuIcon />
-                            </IconButton>
-                        )}
                         {displayAvatar ? (
                             <Avatar sx={{ mr: 2 }}>
                                 <img src={displayAvatar} alt="Group avatar image" />
