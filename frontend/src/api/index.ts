@@ -161,6 +161,13 @@ export class APIService {
         return response.data;
     }
 
+    async startDirectMessage(username: string): Promise<ChatRoom> {
+        const response = await this.request(`/user/${username}/start-dm/`, {
+            method: "POST",
+        });
+        return response.data;
+    }
+
     async updateRoom(
         roomId: number,
         updatedRoom: {

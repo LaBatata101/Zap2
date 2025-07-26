@@ -474,14 +474,16 @@ export const UserProfileDialog = ({
                                 Edit Profile
                             </ActionButton>
                         )}
-                        <ActionButton
-                            onClick={() => onStartDirectMessage(user)}
-                            variant="contained"
-                            startIcon={<MessageOutlined />}
-                            sx={{ minWidth: 160 }}
-                        >
-                            Start Chat
-                        </ActionButton>
+                        {mode !== DialogMode.DM && (
+                            <ActionButton
+                                onClick={() => onStartDirectMessage(user)}
+                                variant="contained"
+                                startIcon={<MessageOutlined />}
+                                sx={{ minWidth: 160 }}
+                            >
+                                Start Chat
+                            </ActionButton>
+                        )}
                     </>
                 )}
             </DialogActions>

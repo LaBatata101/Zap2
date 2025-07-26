@@ -149,6 +149,7 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
     members = serializers.StringRelatedField(many=True, read_only=True)
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    dm_recipient = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRoom
@@ -158,6 +159,8 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
             "description",
             "avatar_img",
             "is_private",
+            "is_dm",
+            "dm_recipient",
             "owner",
             "members",
             "last_message",
@@ -196,6 +199,16 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
             return Message.objects.filter(room=obj, timestamp__gt=last_read).exclude(user=user).count()
         except Membership.DoesNotExist:
             return 0
+
+    def get_dm_recipient(self, obj: ChatRoom):
+        if not obj.is_dm:
+            return None
+
+        current_user = self.context["request"].user
+        recipient = obj.members.exclude(id=current_user.id).first()
+        if recipient:
+            return UserSerializer(recipient, context=self.context).data
+        return None
 
     @override
     def update(self, instance, validated_data):

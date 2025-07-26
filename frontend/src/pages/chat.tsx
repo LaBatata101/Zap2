@@ -22,7 +22,9 @@ enum ChatActionType {
     SetUser,
     Logout,
     SelectRoom,
-    SetMessages,
+    SetInitialMessages,
+    PrependMessages,
+    AddRoom,
     SetRooms,
     UpdateRoom,
     ResetUnreadCount,
@@ -68,9 +70,10 @@ type ChatAction =
       }
     | { type: ChatActionType.SelectRoom; payload: ChatRoom }
     | {
-          type: ChatActionType.SetMessages;
+          type: ChatActionType.PrependMessages | ChatActionType.SetInitialMessages;
           payload: { messages: Message[]; next: string | null; hasMore: boolean };
       }
+    | { type: ChatActionType.AddRoom; payload: ChatRoom }
     | { type: ChatActionType.SetRooms; payload: ChatRoom[] }
     | { type: ChatActionType.SetConnectionStatus; payload: ConnectionStatus }
     | { type: ChatActionType.SetSearchTerm; payload: string }
@@ -112,11 +115,21 @@ function chatReducer(state: ChatState, action: ChatAction) {
                 ...state,
                 currentRoom: action.payload,
                 messages: [],
+                nextMessagesUrl: null,
+                hasMoreMessages: false,
             };
         case ChatActionType.SetRooms:
             return {
                 ...state,
                 rooms: action.payload,
+            };
+        case ChatActionType.AddRoom:
+            if (state.rooms.some((room) => room.id === action.payload.id)) {
+                return state;
+            }
+            return {
+                ...state,
+                rooms: [...state.rooms, action.payload],
             };
         case ChatActionType.ReceiveMessage: {
             const message = action.payload;
@@ -131,6 +144,8 @@ function chatReducer(state: ChatState, action: ChatAction) {
                               message: message.content,
                               timestamp: message.timestamp,
                           },
+                          // Only increment unread count if the room is not active
+                          // and the message is not from the current user
                           unread_count:
                               currentRoom?.id === message.room
                                   ? room.unread_count
@@ -158,7 +173,14 @@ function chatReducer(state: ChatState, action: ChatAction) {
                     ? { ...state.currentRoom, unread_count: 0 }
                     : undefined,
             };
-        case ChatActionType.SetMessages:
+        case ChatActionType.SetInitialMessages:
+            return {
+                ...state,
+                messages: action.payload.messages.slice().reverse(),
+                nextMessagesUrl: action.payload.next,
+                hasMoreMessages: action.payload.hasMore,
+            };
+        case ChatActionType.PrependMessages:
             return {
                 ...state,
                 messages: [...action.payload.messages.slice().reverse(), ...state.messages],
@@ -264,7 +286,7 @@ export const ChatApp = () => {
                 try {
                     const messagesData = await apiService.current.getMessages(currentRoom.id);
                     dispatch({
-                        type: ChatActionType.SetMessages,
+                        type: ChatActionType.SetInitialMessages,
                         payload: {
                             messages: messagesData.results,
                             next: messagesData.next,
@@ -289,7 +311,7 @@ export const ChatApp = () => {
                 nextMessagesUrl,
             );
             dispatch({
-                type: ChatActionType.SetMessages,
+                type: ChatActionType.PrependMessages,
                 payload: {
                     messages: messagesData.results,
                     next: messagesData.next,
@@ -387,6 +409,31 @@ export const ChatApp = () => {
         }
     };
 
+    const handleUpdateRoom = async (
+        roomId: number,
+        name: string,
+        description: string,
+        avatar: File | null,
+        cropAvatarData: CropAvatarData | null,
+    ) => {
+        try {
+            const response = await apiService.current.updateRoom(roomId, {
+                name,
+                description,
+                avatar_img: avatar,
+                crop_avatar_data: cropAvatarData,
+            });
+
+            if (response.status === 200) {
+                dispatch({ type: ChatActionType.UpdateRoom, payload: response.data });
+                return true;
+            }
+        } catch (error) {
+            console.error("Failed to update room:", error);
+        }
+        return false;
+    };
+
     const handleSendMessage = async (content: string, files: File[]) => {
         if (!currentRoom) return;
 
@@ -422,30 +469,19 @@ export const ChatApp = () => {
         }
     };
 
-    const handleUpdateRoom = async (
-        roomId: number,
-        name: string,
-        description: string,
-        avatar: File | null,
-        cropAvatarData: CropAvatarData | null,
-    ) => {
-        try {
-            const response = await apiService.current.updateRoom(roomId, {
-                name,
-                description,
-                avatar_img: avatar,
-                crop_avatar_data: cropAvatarData,
-            });
-
-            if (response.status === 200) {
-                dispatch({ type: ChatActionType.UpdateRoom, payload: response.data });
-                return true;
+    const handleStartDirectMessage = useCallback(
+        async (targetUser: User) => {
+            if (!user || user.id === targetUser.id) return;
+            try {
+                const room = await apiService.current.startDirectMessage(targetUser.username);
+                dispatch({ type: ChatActionType.AddRoom, payload: room });
+                handleRoomSelect(room);
+            } catch (error) {
+                console.error("Failed to start direct message:", error);
             }
-        } catch (error) {
-            console.error("Failed to update room:", error);
-        }
-        return false;
-    };
+        },
+        [user, handleRoomSelect],
+    );
 
     const handleCancelReply = useCallback(() => {
         setReplyingTo(null);
@@ -544,6 +580,7 @@ export const ChatApp = () => {
                         messagesLoading={messagesLoading}
                         onUpdateRoom={handleUpdateRoom}
                         onLoadMembers={loadGroupMembers}
+                        onStartDirectMessage={handleStartDirectMessage}
                     />
                 </Box>
             </Box>

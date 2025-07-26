@@ -2,7 +2,7 @@ from typing import override
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.utils import timezone
@@ -40,6 +40,42 @@ class UserViewSet(viewsets.ModelViewSet[User]):
             if User.objects.filter(username=username).exists()
             else Response(status=status.HTTP_404_NOT_FOUND)
         )
+
+    @action(detail=True, methods=["POST"], url_path="start-dm")
+    def start_dm(self, request, username=None):
+        try:
+            target_user = self.get_object()
+            current_user = request.user
+
+            if target_user == current_user:
+                return Response(
+                    {"error": "You cannot start a DM with yourself."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Look for an existing DM room between the two users
+            dm_room = (
+                ChatRoom.objects.filter(is_dm=True, members=current_user)
+                .filter(members=target_user)
+                .annotate(num_members=Count("members"))
+                .filter(num_members=2)
+                .first()
+            )
+
+            if dm_room:
+                serializer = ChatRoomSerializer(dm_room, context={"request": request})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+            # If no room exists, create a new one
+            room_name = f"dm_{current_user.id}_{target_user.id}"
+            dm_room = ChatRoom.objects.create(name=room_name, is_dm=True, is_private=True)
+            dm_room.members.add(current_user, target_user)
+
+            serializer = ChatRoomSerializer(dm_room, context={"request": request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 class UserLoginView(views.APIView):

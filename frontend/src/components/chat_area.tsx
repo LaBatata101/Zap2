@@ -17,6 +17,7 @@ import { MessageInput } from "./message_input";
 import { useState } from "react";
 import { RoomDetailsDialog } from "./dialog/chat_group_details_dialog";
 import { DialogMode } from "./dialog/common";
+import { UserProfileDialog } from "./dialog/user_profile_dialog";
 
 type ChatAreaProps = {
     currentRoom?: types.ChatRoom;
@@ -41,6 +42,7 @@ type ChatAreaProps = {
         cropAvatarData: types.CropAvatarData | null,
     ) => Promise<boolean>;
     onLoadMembers: (members: string[]) => Promise<types.User[]>;
+    onStartDirectMessage: (user: types.User) => void;
 };
 
 export const ChatArea = ({
@@ -60,6 +62,7 @@ export const ChatArea = ({
     messagesLoading,
     onUpdateRoom,
     onLoadMembers,
+    onStartDirectMessage,
 }: ChatAreaProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -69,6 +72,15 @@ export const ChatArea = ({
             ? Math.max(0, messages.length - currentRoom.unread_count)
             : null;
     const [isRoomDetailsOpen, setRoomDetailsOpen] = useState(false);
+    const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
+
+    const handleHeaderClick = () => {
+        if (currentRoom?.is_dm) {
+            setProfileDialogOpen(true);
+        } else {
+            setRoomDetailsOpen(true);
+        }
+    };
 
     if (!currentRoom) {
         return (
@@ -101,6 +113,12 @@ export const ChatArea = ({
         );
     }
 
+    const isDM = currentRoom.is_dm;
+    const recipient = currentRoom.dm_recipient;
+    const displayName = isDM ? recipient?.username : currentRoom.name;
+    const displayAvatar = isDM ? recipient?.profile.avatar_img : currentRoom.avatar_img;
+    const avatarFallback = (isDM ? recipient?.username : currentRoom.name)?.charAt(0).toUpperCase();
+
     return (
         <Stack sx={{ height: "100%", width: "100%" }}>
             <AppBar
@@ -115,7 +133,7 @@ export const ChatArea = ({
             >
                 <Toolbar sx={{ minHeight: "64px !important" }}>
                     <Box
-                        onClick={() => setRoomDetailsOpen(true)}
+                        onClick={handleHeaderClick}
                         sx={{
                             display: "flex",
                             alignItems: "center",
@@ -133,7 +151,10 @@ export const ChatArea = ({
                                 color="inherit"
                                 aria-label="open drawer"
                                 edge="start"
-                                onClick={onMenuClick}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onMenuClick();
+                                }}
                                 sx={{
                                     mr: 2,
                                     color: "text.secondary",
@@ -146,9 +167,9 @@ export const ChatArea = ({
                                 <MenuIcon />
                             </IconButton>
                         )}
-                        {currentRoom.avatar_img ? (
+                        {displayAvatar ? (
                             <Avatar sx={{ mr: 2 }}>
-                                <img src={currentRoom.avatar_img} alt="Group avatar image" />
+                                <img src={displayAvatar} alt="Group avatar image" />
                             </Avatar>
                         ) : (
                             <Avatar
@@ -158,7 +179,7 @@ export const ChatArea = ({
                                     boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
                                 }}
                             >
-                                {currentRoom.name.charAt(0).toUpperCase()}
+                                {avatarFallback}
                             </Avatar>
                         )}
                         <Typography
@@ -166,7 +187,7 @@ export const ChatArea = ({
                             color="text.primary"
                             sx={{ flexGrow: 1, fontWeight: 600 }}
                         >
-                            {currentRoom.name}
+                            {displayName}
                         </Typography>
                     </Box>
                 </Toolbar>
@@ -183,6 +204,8 @@ export const ChatArea = ({
                 onFetchMore={onFetchMoreMessages}
                 hasMore={hasMoreMessages}
                 isLoading={messagesLoading}
+                isDM={isDM}
+                onStartDirectMessage={onStartDirectMessage}
             />
             <MessageInput
                 isConnected={isConnected}
@@ -191,7 +214,7 @@ export const ChatArea = ({
                 onCancelReply={onCancelReply}
             />
 
-            {currentRoom && (
+            {currentRoom && !isDM && (
                 <RoomDetailsDialog
                     room={currentRoom}
                     isOpen={isRoomDetailsOpen}
@@ -199,6 +222,16 @@ export const ChatArea = ({
                     onUpdateRoom={onUpdateRoom}
                     onClose={() => setRoomDetailsOpen(false)}
                     onLoadMembers={onLoadMembers}
+                />
+            )}
+            {recipient && isDM && (
+                <UserProfileDialog
+                    user={recipient}
+                    isOpen={isProfileDialogOpen}
+                    mode={DialogMode.DM}
+                    onClose={() => setProfileDialogOpen(false)}
+                    onStartDirectMessage={(_) => {}}
+                    onUpdateProfile={null}
                 />
             )}
         </Stack>

@@ -307,6 +307,7 @@ export const Sidebar = ({
                         <RoomListItem
                             key={room.id}
                             room={room}
+                            currentUser={user}
                             isSelected={currentRoom?.id === room.id}
                             onSelect={onRoomSelect}
                         />

@@ -34,6 +34,8 @@ interface MessageListProps {
     onFetchMore: () => void;
     hasMore: boolean;
     isLoading: boolean;
+    isDM: boolean;
+    onStartDirectMessage: (user: types.User) => void;
 }
 
 interface ScrollState {
@@ -55,6 +57,8 @@ export const MessageList = memo(
         onFetchMore,
         hasMore,
         isLoading,
+        isDM,
+        onStartDirectMessage,
     }: MessageListProps) => {
         const messagesEndRef = useRef<HTMLDivElement>(null);
         const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -423,12 +427,12 @@ export const MessageList = memo(
                     <UserProfileDialog
                         user={profileDialogData}
                         isOpen={isProfileDialogOpen}
-                        mode={DialogMode.View}
+                        mode={isDM ? DialogMode.DM : DialogMode.View}
                         onUpdateProfile={null}
                         onClose={() => {
                             setIsProfileDialogOpen(false);
                         }}
-                        onStartDirectMessage={() => console.log("TODO")}
+                        onStartDirectMessage={onStartDirectMessage}
                     />
                 )}
             </Box>

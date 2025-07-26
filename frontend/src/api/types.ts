@@ -42,6 +42,8 @@ export type ChatRoom = {
     is_private: boolean;
     description: string;
     members: string[];
+    is_dm: boolean;
+    dm_recipient: User | null;
 };
 
 export type LoginCredentials = {
