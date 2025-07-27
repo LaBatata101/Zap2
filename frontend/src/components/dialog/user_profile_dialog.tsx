@@ -353,21 +353,49 @@ export const UserProfileDialog = ({
                                 }}
                             />
 
-                            <TextField
-                                label="Bio"
-                                value={bio}
-                                onChange={(e) => setBio(e.target.value)}
-                                fullWidth
-                                multiline
-                                rows={3}
-                                variant="outlined"
-                                placeholder="Tell others about yourself..."
-                                sx={{
-                                    "& .MuiOutlinedInput-root": {
-                                        borderRadius: 2,
-                                    },
-                                }}
-                            />
+                            <Box sx={{ position: "relative" }}>
+                                <TextField
+                                    label="Bio"
+                                    value={bio}
+                                    onChange={(e) => {
+                                        if (e.target.value.length <= 140) {
+                                            setBio(e.target.value);
+                                        }
+                                    }}
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    variant="outlined"
+                                    placeholder="Tell others about yourself..."
+                                    sx={{
+                                        "& .MuiOutlinedInput-root": {
+                                            borderRadius: 2,
+                                        },
+                                    }}
+                                    error={bio.length > 140}
+                                />
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        position: "absolute",
+                                        bottom: 8,
+                                        right: 12,
+                                        color:
+                                            bio.length > 130
+                                                ? bio.length >= 140
+                                                    ? "error.main"
+                                                    : "warning.main"
+                                                : "text.secondary",
+                                        fontSize: "0.75rem",
+                                        backgroundColor: "background.paper",
+                                        px: 1,
+                                        borderRadius: 1,
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    {bio.length}/140
+                                </Typography>
+                            </Box>
                         </Stack>
                     ) : (
                         <Box sx={{ textAlign: "center", maxWidth: "100%" }}>
