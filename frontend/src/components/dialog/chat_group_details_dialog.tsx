@@ -18,6 +18,7 @@ import {
     ListItemText,
     Avatar,
     Collapse,
+    Switch,
 } from "@mui/material";
 import { CropAvatarData, ChatRoom, User } from "../../api/types";
 import {
@@ -55,6 +56,7 @@ type RoomDetailsDialogProps = {
         cropAvatarData: CropAvatarData | null,
     ) => Promise<boolean>;
     onLoadMembers: (members: string[]) => Promise<User[]>;
+    onProfileView: (user: User) => void;
 };
 
 export const RoomDetailsDialog = ({
@@ -64,9 +66,11 @@ export const RoomDetailsDialog = ({
     onUpdateRoom,
     mode,
     onLoadMembers,
+    onProfileView,
 }: RoomDetailsDialogProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState("");
+    const [isPrivate, setPrivate] = useState(false);
     const [description, setDescription] = useState("");
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [cropData, setCropData] = useState<CropAvatarData | null>(null);
@@ -84,6 +88,7 @@ export const RoomDetailsDialog = ({
     useEffect(() => {
         if (isOpen) {
             setName(room.name);
+            setPrivate(room.is_private);
             setDescription(room.description || "");
             setAvatarPreview(room.avatar_img || null);
             setIsEditing(false);
@@ -218,27 +223,193 @@ export const RoomDetailsDialog = ({
 
                     {isEditing ? (
                         <Stack spacing={2.5} sx={{ width: "100%" }}>
-                            <TextField
-                                label="Room Name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                fullWidth
-                            />
-                            <TextField
-                                label="Description"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                fullWidth
-                                multiline
-                                rows={3}
-                            />
+                            <Box sx={{ position: "relative" }}>
+                                <TextField
+                                    label="Room Name"
+                                    value={name}
+                                    onChange={(e) => {
+                                        if (e.target.value.length <= 100) {
+                                            setName(e.target.value);
+                                        }
+                                    }}
+                                    fullWidth
+                                    error={name.length > 100}
+                                />
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        position: "absolute",
+                                        bottom: 8,
+                                        right: 12,
+                                        color:
+                                            name.length > 80
+                                                ? name.length >= 100
+                                                    ? "error.main"
+                                                    : "warning.main"
+                                                : "text.secondary",
+                                        fontSize: "0.75rem",
+                                        backgroundColor: "background.paper",
+                                        px: 1,
+                                        borderRadius: 1,
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    {name.length}/100
+                                </Typography>
+                            </Box>
+                            <Box sx={{ position: "relative" }}>
+                                <TextField
+                                    label="Description"
+                                    value={description}
+                                    onChange={(e) => {
+                                        if (e.target.value.length <= 140) {
+                                            setDescription(e.target.value);
+                                        }
+                                    }}
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    error={description.length > 140}
+                                />
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        position: "absolute",
+                                        bottom: 8,
+                                        right: 12,
+                                        color:
+                                            description.length > 130
+                                                ? description.length >= 140
+                                                    ? "error.main"
+                                                    : "warning.main"
+                                                : "text.secondary",
+                                        fontSize: "0.75rem",
+                                        backgroundColor: "background.paper",
+                                        px: 1,
+                                        borderRadius: 1,
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    {description.length}/140
+                                </Typography>
+                            </Box>
+                            {/* Privacy Toggle */}
+                            <Box
+                                sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    width: "100%",
+                                    mt: 2,
+                                    p: 2,
+                                    borderRadius: 2,
+                                    backgroundColor: "background.paper",
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    transition: "all 0.2s ease-in-out",
+                                    "&:hover": {
+                                        borderColor: "primary.main",
+                                        backgroundColor: "action.hover",
+                                    },
+                                }}
+                            >
+                                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                                    <Typography variant="body1" fontWeight={500}>
+                                        Group type
+                                    </Typography>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ fontSize: "0.8rem" }}
+                                    >
+                                        {isPrivate
+                                            ? "Only invited members can join"
+                                            : "Anyone can discover and join"}
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                    <Typography
+                                        variant="body2"
+                                        color={isPrivate ? "text.secondary" : "primary.main"}
+                                        fontWeight={isPrivate ? 400 : 600}
+                                        sx={{ fontSize: "0.8rem" }}
+                                    >
+                                        Public
+                                    </Typography>
+                                    <Switch
+                                        checked={isPrivate}
+                                        onChange={(e) => setPrivate(e.target.checked)}
+                                        sx={{
+                                            width: 56,
+                                            height: 32,
+                                            padding: 0,
+                                            "& .MuiSwitch-switchBase": {
+                                                padding: 0,
+                                                margin: "4px",
+                                                transitionDuration: "300ms",
+                                                "&.Mui-checked": {
+                                                    transform: "translateX(24px)",
+                                                    color: "#fff",
+                                                    "& + .MuiSwitch-track": {
+                                                        backgroundColor: "secondary.main",
+                                                        opacity: 1,
+                                                        border: 0,
+                                                    },
+                                                    "&.Mui-disabled + .MuiSwitch-track": {
+                                                        opacity: 0.5,
+                                                    },
+                                                },
+                                                "&.Mui-focusVisible .MuiSwitch-thumb": {
+                                                    color: "secondary.main",
+                                                    border: "6px solid #fff",
+                                                },
+                                                "&.Mui-disabled .MuiSwitch-thumb": {
+                                                    color: "grey.100",
+                                                },
+                                                "&.Mui-disabled + .MuiSwitch-track": {
+                                                    opacity: 0.3,
+                                                },
+                                            },
+                                            "& .MuiSwitch-thumb": {
+                                                boxSizing: "border-box",
+                                                width: 24,
+                                                height: 24,
+                                                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                            },
+                                            "& .MuiSwitch-track": {
+                                                borderRadius: 16,
+                                                backgroundColor: "divider",
+                                                opacity: 1,
+                                                transition: "background-color 300ms",
+                                            },
+                                        }}
+                                    />
+                                    <Typography
+                                        variant="body2"
+                                        color={isPrivate ? "secondary.main" : "text.secondary"}
+                                        fontWeight={isPrivate ? 600 : 400}
+                                        sx={{ fontSize: "0.8rem" }}
+                                    >
+                                        Private
+                                    </Typography>
+                                </Box>
+                            </Box>
                         </Stack>
                     ) : (
                         <Box sx={{ textAlign: "center", width: "100%" }}>
                             <Typography variant="h5" fontWeight={600} gutterBottom>
                                 {room.name}
                             </Typography>
-                            <Typography color="text.secondary" sx={{ mb: 2 }}>
+                            <Typography
+                                color="text.secondary"
+                                sx={{
+                                    mb: 2,
+                                    whiteSpace: "pre-wrap",
+                                    wordBreak: "break-word",
+                                    overflowWrap: "break-word",
+                                    textAlign: "justify",
+                                }}
+                            >
                                 {room.description || "No description."}
                             </Typography>
 
@@ -264,128 +435,136 @@ export const RoomDetailsDialog = ({
                     )}
 
                     {/* Members Section */}
-                    <Box sx={{ width: "100%" }}>
-                        <Divider sx={{ mb: 2 }} />
+                    {!isEditing && (
+                        <Box sx={{ width: "100%" }}>
+                            <Divider sx={{ mb: 2 }} />
 
-                        <Box
-                            sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                mb: 2,
-                                cursor: "pointer",
-                                "&:hover": {
-                                    backgroundColor: "action.hover",
-                                    borderRadius: 1,
-                                },
-                                p: 1,
-                                mx: -1,
-                            }}
-                            onClick={() => setShowMembers(!showMembers)}
-                        >
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                <People color="primary" />
-                                <Typography variant="h6" fontWeight={600}>
-                                    Members
-                                </Typography>
-                                <Chip
-                                    label={members.length}
-                                    size="small"
-                                    sx={{
-                                        backgroundColor: "primary.main",
-                                        color: "primary.contrastText",
-                                        minWidth: 24,
-                                        height: 20,
-                                        fontSize: "0.75rem",
-                                    }}
-                                />
-                            </Box>
-                            <IconButton size="small">
-                                {showMembers ? <ExpandLess /> : <ExpandMore />}
-                            </IconButton>
-                        </Box>
-
-                        <Collapse in={showMembers}>
-                            {loadingMembers ? (
-                                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-                                    <CircularProgress size={24} />
+                            <Box
+                                sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    mb: 2,
+                                    cursor: "pointer",
+                                    "&:hover": {
+                                        backgroundColor: "action.hover",
+                                        borderRadius: 1,
+                                    },
+                                    p: 1,
+                                    mx: -1,
+                                }}
+                                onClick={() => setShowMembers(!showMembers)}
+                            >
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                    <People color="primary" />
+                                    <Typography variant="h6" fontWeight={600}>
+                                        Members
+                                    </Typography>
+                                    <Chip
+                                        label={members.length}
+                                        size="small"
+                                        sx={{
+                                            backgroundColor: "primary.main",
+                                            color: "primary.contrastText",
+                                            minWidth: 24,
+                                            height: 20,
+                                            fontSize: "0.75rem",
+                                        }}
+                                    />
                                 </Box>
-                            ) : (
-                                <List sx={{ py: 0 }}>
-                                    {members.map((member, _) => (
-                                        <ListItem
-                                            key={member.id}
-                                            sx={{
-                                                px: 0,
-                                                py: 1,
-                                                borderRadius: 1,
-                                                "&:hover": {
-                                                    backgroundColor: "action.hover",
-                                                },
-                                            }}
-                                        >
-                                            <ListItemAvatar>
-                                                <Avatar
+                                <IconButton size="small">
+                                    {showMembers ? <ExpandLess /> : <ExpandMore />}
+                                </IconButton>
+                            </Box>
+
+                            <Collapse in={showMembers}>
+                                {loadingMembers ? (
+                                    <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                                        <CircularProgress size={24} />
+                                    </Box>
+                                ) : (
+                                    <List sx={{ py: 0 }}>
+                                        {members.map((member, _) => (
+                                            <Box
+                                                key={member.id}
+                                                onClick={() => onProfileView(member)}
+                                                sx={{ cursor: "pointer" }}
+                                            >
+                                                <ListItem
                                                     sx={{
-                                                        width: 40,
-                                                        height: 40,
-                                                        border: isOwner(member)
-                                                            ? "2px solid"
-                                                            : "none",
-                                                        borderColor: "warning.main",
+                                                        px: 0,
+                                                        py: 1,
+                                                        borderRadius: 1,
+                                                        "&:hover": {
+                                                            backgroundColor: "action.hover",
+                                                        },
                                                     }}
                                                 >
-                                                    {getAvatarContent(member)}
-                                                </Avatar>
-                                            </ListItemAvatar>
-                                            <ListItemText
-                                                primary={
-                                                    <Box
-                                                        sx={{
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            gap: 1,
-                                                        }}
-                                                    >
-                                                        <Typography
-                                                            variant="body2"
-                                                            fontWeight={500}
+                                                    <ListItemAvatar>
+                                                        <Avatar
+                                                            sx={{
+                                                                width: 40,
+                                                                height: 40,
+                                                                border: isOwner(member)
+                                                                    ? "2px solid"
+                                                                    : "none",
+                                                                borderColor: "warning.main",
+                                                            }}
                                                         >
-                                                            {member.username}
-                                                        </Typography>
-                                                        {isOwner(member) && (
-                                                            <Tooltip title="Group Owner">
-                                                                <Star
-                                                                    sx={{
-                                                                        fontSize: 16,
-                                                                        color: "warning.main",
-                                                                    }}
-                                                                />
-                                                            </Tooltip>
-                                                        )}
-                                                        {/* TODO: display chip for ADMINS */}
-                                                        {member.username === room.owner && (
-                                                            <Chip
-                                                                label="Owner"
-                                                                size="small"
-                                                                color="error"
+                                                            {getAvatarContent(member)}
+                                                        </Avatar>
+                                                    </ListItemAvatar>
+                                                    <ListItemText
+                                                        primary={
+                                                            <Box
                                                                 sx={{
-                                                                    height: 18,
-                                                                    fontSize: "0.7rem",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    gap: 1,
                                                                 }}
-                                                            />
-                                                        )}
-                                                    </Box>
-                                                }
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            )}
-                        </Collapse>
-                    </Box>
+                                                            >
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    fontWeight={500}
+                                                                >
+                                                                    {member.username}
+                                                                </Typography>
+                                                                {isOwner(member) && (
+                                                                    <Tooltip title="Group Owner">
+                                                                        <Star
+                                                                            sx={{
+                                                                                fontSize: 16,
+                                                                                color: "warning.main",
+                                                                            }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                )}
+                                                                {/* TODO: display chip for ADMINS */}
+                                                                {member.username === room.owner && (
+                                                                    <Chip
+                                                                        label="Owner"
+                                                                        size="small"
+                                                                        color="error"
+                                                                        sx={{
+                                                                            height: 18,
+                                                                            fontSize: "0.7rem",
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            </Box>
+                                                        }
+                                                    />
+                                                </ListItem>
+                                            </Box>
+                                        ))}
+                                    </List>
+                                )}
+                            </Collapse>
+
+                            <Divider sx={{ mt: 1 }} />
+                        </Box>
+                    )}
                 </Stack>
-                <Divider sx={{ mt: 1 }} />
             </DialogContent>
             <DialogActions
                 sx={{

@@ -73,6 +73,7 @@ export const ChatArea = ({
             : null;
     const [isRoomDetailsOpen, setRoomDetailsOpen] = useState(false);
     const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
+    const [recipient, setRecipient] = useState(currentRoom?.dm_recipient);
 
     const handleHeaderClick = () => {
         if (currentRoom?.is_dm) {
@@ -114,7 +115,6 @@ export const ChatArea = ({
     }
 
     const isDM = currentRoom.is_dm;
-    const recipient = currentRoom.dm_recipient;
     const displayName = isDM ? recipient?.username : currentRoom.name;
     const displayAvatar = isDM ? recipient?.profile.avatar_img : currentRoom.avatar_img;
     const avatarFallback = (isDM ? recipient?.username : currentRoom.name)?.charAt(0).toUpperCase();
@@ -223,15 +223,30 @@ export const ChatArea = ({
                     onUpdateRoom={onUpdateRoom}
                     onClose={() => setRoomDetailsOpen(false)}
                     onLoadMembers={onLoadMembers}
+                    onProfileView={(user) => {
+                        setRecipient(user);
+                        setProfileDialogOpen(true);
+                    }}
                 />
             )}
-            {recipient && isDM && (
+            {/* This is used to display the user information in the chat area, when clicked in the toolbar, or
+             * in the group chat dialog, when click in one of the members of the chat.
+             */}
+            {recipient && (isDM || isProfileDialogOpen) && (
                 <UserProfileDialog
                     user={recipient}
                     isOpen={isProfileDialogOpen}
-                    mode={DialogMode.DM}
+                    mode={isDM ? DialogMode.DM : DialogMode.View}
                     onClose={() => setProfileDialogOpen(false)}
-                    onStartDirectMessage={(_) => {}}
+                    onStartDirectMessage={
+                        isDM
+                            ? (_) => {}
+                            : (user) => {
+                                  onStartDirectMessage(user);
+                                  setProfileDialogOpen(false);
+                                  setRoomDetailsOpen(false);
+                              }
+                    }
                     onUpdateProfile={null}
                 />
             )}

@@ -64,7 +64,7 @@ export const MessageList = memo(
         const scrollContainerRef = useRef<HTMLDivElement>(null);
         const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
         const [showScrollButton, setShowScrollButton] = useState(false);
-        const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+        const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
         const [profileDialogData, setProfileDialogData] = useState<types.User | null>(null);
         const firstUnreadRef = useRef<HTMLDivElement>(null);
         const prevMessagesLength = useRef(0);
@@ -231,7 +231,7 @@ export const MessageList = memo(
         }, []);
 
         const handleUserProfileDialog = useCallback((user: types.User) => {
-            setIsProfileDialogOpen(true);
+            setProfileDialogOpen(true);
             setProfileDialogData(user);
         }, []);
 
@@ -430,9 +430,12 @@ export const MessageList = memo(
                         mode={isDM ? DialogMode.DM : DialogMode.View}
                         onUpdateProfile={null}
                         onClose={() => {
-                            setIsProfileDialogOpen(false);
+                            setProfileDialogOpen(false);
                         }}
-                        onStartDirectMessage={onStartDirectMessage}
+                        onStartDirectMessage={(user) => {
+                            onStartDirectMessage(user);
+                            setProfileDialogOpen(false);
+                        }}
                     />
                 )}
             </Box>
