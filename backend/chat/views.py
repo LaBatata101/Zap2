@@ -42,32 +42,27 @@ class UserViewSet(viewsets.ModelViewSet[User]):
         )
 
     @action(detail=True, methods=["POST"], url_path="start-dm")
-    def start_dm(self, request, username=None):
+    def start_dm(self, request, username):
         try:
             target_user = self.get_object()
             current_user = request.user
 
+            # TODO: allow users to send messages to itself
             if target_user == current_user:
                 return Response(
                     {"error": "You cannot start a DM with yourself."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            room_name = f"dm_{current_user.id}_{target_user.id}"
             # Look for an existing DM room between the two users
-            dm_room = (
-                ChatRoom.objects.filter(is_dm=True, members=current_user)
-                .filter(members=target_user)
-                .annotate(num_members=Count("members"))
-                .filter(num_members=2)
-                .first()
-            )
+            dm_room = ChatRoom.objects.filter(is_dm=True, name=room_name).first()
 
             if dm_room:
                 serializer = ChatRoomSerializer(dm_room, context={"request": request})
                 return Response(serializer.data, status=status.HTTP_200_OK)
 
             # If no room exists, create a new one
-            room_name = f"dm_{current_user.id}_{target_user.id}"
             dm_room = ChatRoom.objects.create(name=room_name, is_dm=True, is_private=True)
             dm_room.members.add(current_user, target_user)
 

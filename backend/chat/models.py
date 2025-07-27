@@ -37,7 +37,7 @@ class ChatRoom(models.Model):
 
     @override
     def __str__(self):
-        return f"{self.name} (${"Private" if self.is_private else "Public"})"
+        return f"{self.name} ({"Private" if self.is_private else "Public"})"
 
 
 @final
