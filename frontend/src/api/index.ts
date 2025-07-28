@@ -207,7 +207,7 @@ export class APIService {
     // User methods
     async checkIfUserExists(username: string): Promise<boolean> {
         const response = await this.request(`/user/exists/${username}/`);
-        return response.status === 200;
+        return response.status === 302;
     }
 
     async getUser(username: string): Promise<User> {

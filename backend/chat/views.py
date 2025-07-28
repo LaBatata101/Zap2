@@ -36,7 +36,7 @@ class UserViewSet(viewsets.ModelViewSet[User]):
     )
     def exists(self, _, username=None):
         return (
-            Response(status=status.HTTP_200_OK)
+            Response(status=status.HTTP_302_FOUND)
             if User.objects.filter(username=username).exists()
             else Response(status=status.HTTP_404_NOT_FOUND)
         )
