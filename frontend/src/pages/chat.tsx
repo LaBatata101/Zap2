@@ -11,6 +11,7 @@ import {
     MessagePayload,
     RegistrationCredentials,
     User,
+    WebSocketEvent,
 } from "../api/types";
 import { Box, ThemeProvider, useMediaQuery, useTheme } from "@mui/material";
 import { darkTheme } from "../theme";
@@ -32,7 +33,8 @@ enum ChatActionType {
     SetSearchTerm,
     SetHighlightedMessage,
     SetMessagesLoading,
-    ReceiveMessage,
+    SendMessage,
+    DeleteMessage,
     Error,
 }
 
@@ -81,7 +83,15 @@ type ChatAction =
     | { type: ChatActionType.SetHighlightedMessage; payload?: number }
     | { type: ChatActionType.UpdateRoom; payload: ChatRoom }
     | { type: ChatActionType.ResetUnreadCount; payload: number }
-    | { type: ChatActionType.ReceiveMessage; payload: Message };
+    | {
+          type: ChatActionType.DeleteMessage;
+          payload: {
+              messageId: number;
+              roomId: number;
+              lastMessage?: { username: string; content: string; timestamp: string; room: number };
+          };
+      }
+    | { type: ChatActionType.SendMessage; payload: Message };
 
 const initialState: ChatState = {
     user: undefined,
@@ -131,7 +141,7 @@ function chatReducer(state: ChatState, action: ChatAction) {
                 ...state,
                 rooms: [...state.rooms, action.payload],
             };
-        case ChatActionType.ReceiveMessage: {
+        case ChatActionType.SendMessage: {
             const message = action.payload;
             const { rooms, currentRoom, messages } = state;
 
@@ -206,6 +216,31 @@ function chatReducer(state: ChatState, action: ChatAction) {
                         ? action.payload
                         : state.currentRoom,
             };
+        case ChatActionType.DeleteMessage:
+            const lastMessage = action.payload.lastMessage;
+            const updatedRooms = state.rooms.map((room) =>
+                room.id === action.payload.roomId
+                    ? {
+                          ...room,
+                          last_message: lastMessage
+                              ? {
+                                    username: lastMessage.username,
+                                    message: lastMessage.content,
+                                    timestamp: lastMessage.timestamp,
+                                }
+                              : undefined,
+                          unread_count: lastMessage ? room.unread_count - 1 : room.unread_count,
+                      }
+                    : room,
+            );
+
+            return {
+                ...state,
+                rooms: updatedRooms,
+                messages: state.messages.filter(
+                    (message) => message.id !== action.payload.messageId,
+                ),
+            };
         default:
             //@ts-ignore
             throw new Error(`Unhandled action type: ${action.type}`);
@@ -255,8 +290,25 @@ export const ChatApp = () => {
     useEffect(() => {
         const service = wsService.current;
 
-        const handleMessage = (data: Message) => {
-            dispatch({ type: ChatActionType.ReceiveMessage, payload: data });
+        const handleMessage = (event: WebSocketEvent) => {
+            switch (event.type) {
+                case "send_message":
+                    dispatch({ type: ChatActionType.SendMessage, payload: event.message });
+                    break;
+                case "delete_message":
+                    dispatch({
+                        type: ChatActionType.DeleteMessage,
+                        payload: {
+                            messageId: event.message_id,
+                            roomId: event.room,
+                            lastMessage: event.last_message,
+                        },
+                    });
+                    break;
+                default:
+                    //@ts-ignore
+                    console.error("WebSocket event not handled: ", event.type);
+            }
         };
 
         const handleConnect = () =>
@@ -354,7 +406,7 @@ export const ChatApp = () => {
 
             return true;
         } catch (error) {
-            console.log(error);
+            console.error(error);
             dispatch({ type: ChatActionType.Error });
             return false;
         }
@@ -371,7 +423,7 @@ export const ChatApp = () => {
             });
             return true;
         } catch (error) {
-            console.log(error);
+            console.error(error);
             dispatch({ type: ChatActionType.Error });
             return false;
         }
@@ -466,6 +518,15 @@ export const ChatApp = () => {
         } catch (error) {
             console.error("Failed to send message: ", error);
             throw error;
+        }
+    };
+
+    const handleDeleteMessage = async (message: Message) => {
+        try {
+            await apiService.current.deleteMessage(message.id);
+            wsService.current.deleteMessage(message.id, message.room);
+        } catch (error) {
+            console.error("Failed to delete message: ", error);
         }
     };
 
@@ -581,6 +642,7 @@ export const ChatApp = () => {
                         onUpdateRoom={handleUpdateRoom}
                         onLoadMembers={loadGroupMembers}
                         onStartDirectMessage={handleStartDirectMessage}
+                        onDeleteMessage={handleDeleteMessage}
                     />
                 </Box>
             </Box>

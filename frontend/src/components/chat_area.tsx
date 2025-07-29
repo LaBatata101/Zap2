@@ -43,6 +43,7 @@ type ChatAreaProps = {
     ) => Promise<boolean>;
     onLoadMembers: (members: string[]) => Promise<types.User[]>;
     onStartDirectMessage: (user: types.User) => void;
+    onDeleteMessage: (message: types.Message) => void;
 };
 
 export const ChatArea = ({
@@ -63,6 +64,7 @@ export const ChatArea = ({
     onUpdateRoom,
     onLoadMembers,
     onStartDirectMessage,
+    onDeleteMessage,
 }: ChatAreaProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -115,6 +117,7 @@ export const ChatArea = ({
     }
 
     const isDM = currentRoom.is_dm;
+    const isChatGroupOwner = currentRoom.owner === user.username;
     const displayName = isDM ? recipient?.username : currentRoom.name;
     const displayAvatar = isDM ? recipient?.profile.avatar_img : currentRoom.avatar_img;
     const avatarFallback = (isDM ? recipient?.username : currentRoom.name)?.charAt(0).toUpperCase();
@@ -206,7 +209,9 @@ export const ChatArea = ({
                 hasMore={hasMoreMessages}
                 isLoading={messagesLoading}
                 isDM={isDM}
+                isChatGroupOwner={isChatGroupOwner}
                 onStartDirectMessage={onStartDirectMessage}
+                onDeleteMessage={onDeleteMessage}
             />
             <MessageInput
                 isConnected={isConnected}

@@ -337,7 +337,7 @@ export const Sidebar = ({
                 mode={DialogMode.Edit}
                 onClose={() => setProfileDialogOpen(false)}
                 onStartDirectMessage={(user) => {
-                    // TODO
+                    // TODO: save messages when DM'ing itself
                     console.log("Start direct message with", user.username);
                     setProfileDialogOpen(false);
                 }}

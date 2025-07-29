@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { formatDate } from "../helpers/format";
 import { Message, MessageSequenceType } from "./message";
-import { ContentCopy, KeyboardArrowDown, Reply } from "@mui/icons-material";
+import { ContentCopy, Delete, KeyboardArrowDown, Reply } from "@mui/icons-material";
 import { UserProfileDialog } from "./dialog/user_profile_dialog";
 import { DialogMode } from "./dialog/common";
 
@@ -27,6 +27,7 @@ interface MessageListProps {
     messages: types.Message[];
     currentUser: types.User;
     onReply: (message: types.Message) => void;
+    onDeleteMessage: (message: types.Message) => void;
     onReplyClick: (messageId: number) => void;
     highlightedMessageId?: number;
     firstUnreadIndex: number | null;
@@ -35,6 +36,7 @@ interface MessageListProps {
     hasMore: boolean;
     isLoading: boolean;
     isDM: boolean;
+    isChatGroupOwner: boolean;
     onStartDirectMessage: (user: types.User) => void;
 }
 
@@ -58,7 +60,9 @@ export const MessageList = memo(
         hasMore,
         isLoading,
         isDM,
+        isChatGroupOwner,
         onStartDirectMessage,
+        onDeleteMessage,
     }: MessageListProps) => {
         const messagesEndRef = useRef<HTMLDivElement>(null);
         const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -258,6 +262,13 @@ export const MessageList = memo(
             }
         };
 
+        const handleDelete = () => {
+            if (contextMenu) {
+                onDeleteMessage(contextMenu.message);
+                handleClose();
+            }
+        };
+
         const scrollToBottom = () => {
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         };
@@ -305,7 +316,13 @@ export const MessageList = memo(
                     return (
                         <div key={message.id} id={`message-${message.id}`}>
                             {showDate && (
-                                <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        justifyContent: "center",
+                                        my: 2,
+                                    }}
+                                >
                                     <Chip
                                         label={formatDate(message.timestamp)}
                                         sx={{
@@ -324,7 +341,11 @@ export const MessageList = memo(
                             {isFirstUnread && (
                                 <Box
                                     ref={isFirstUnread ? firstUnreadRef : null}
-                                    sx={{ display: "flex", justifyContent: "center", my: 2 }}
+                                    sx={{
+                                        display: "flex",
+                                        justifyContent: "center",
+                                        my: 2,
+                                    }}
                                 >
                                     <Chip
                                         label={`Unread messages: ${unreadCount}`}
@@ -422,6 +443,24 @@ export const MessageList = memo(
                         </ListItemIcon>
                         <ListItemText sx={{ color: "text.primary" }}>Copy Text</ListItemText>
                     </MenuItem>
+                    {/* TODO: check if user is group ADMIN*/}
+                    {(currentUser.is_superuser ||
+                        isChatGroupOwner ||
+                        currentUser.id === contextMenu?.message.user.id) && (
+                        <MenuItem
+                            onClick={handleDelete}
+                            sx={{
+                                "&:hover": {
+                                    bgcolor: "action.hover",
+                                },
+                            }}
+                        >
+                            <ListItemIcon sx={{ color: "error.main" }}>
+                                <Delete fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText sx={{ color: "error.main" }}>Delete Message</ListItemText>
+                        </MenuItem>
+                    )}
                 </Menu>
                 {profileDialogData && (
                     <UserProfileDialog

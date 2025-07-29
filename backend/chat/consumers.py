@@ -6,7 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 from chat.serializers import MessageSerializer
 
-from .models import ChatRoom, Message, MessageMedia
+from .models import ChatRoom, Message
 
 
 class UserChatConsumer(AsyncWebsocketConsumer):
@@ -38,21 +38,62 @@ class UserChatConsumer(AsyncWebsocketConsumer):
     @override
     async def receive(self, text_data=None, bytes_data=None):
         data = json.loads(text_data)
-        room = data["room"]
+        msg_type = data["type"]
 
         if not self.user.is_authenticated:
             return
 
-        await self.channel_layer.group_send(
-            f"chat_{room}",
-            {
-                "type": "chat.message",  # call the `chat_message` method
-                "message": text_data,
-            },
-        )
+        match msg_type:
+            case "send_message":
+                room = data["message"]["room"]
+                await self.channel_layer.group_send(
+                    f"chat_{room}",
+                    {
+                        "type": "chat.message",  # call the `chat_message` method
+                        "message": text_data,
+                    },
+                )
+            case "delete_message":
+                await self.channel_layer.group_send(
+                    f"chat_{data["room"]}",
+                    {
+                        "type": "chat.delete.message",  # call the `chat_delete_message` method
+                        "message_id": data["message_id"],
+                        "room": data["room"],
+                    },
+                )
+            case t:
+                raise Exception(f"Message type not handled: {t}")
 
     async def chat_message(self, event):
         await self.send(text_data=event["message"])
+
+    async def chat_delete_message(self, event):
+        last_msg = await self.get_prev_message_of_id(event["message_id"], event["room"])
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "delete_message",
+                    "message_id": event["message_id"],
+                    "room": event["room"],
+                    "last_message": {
+                        "username": last_msg["user"]["username"],
+                        "content": last_msg["content"],
+                        "timestamp": last_msg["timestamp"],
+                        "room": last_msg["room"],
+                    },
+                }
+            )
+        )
+
+    @database_sync_to_async
+    def get_prev_message_of_id(self, message_id, room):
+        msg = Message.objects.get(id=message_id)
+        if not msg:
+            raise Exception(f"Message with {message_id=} not found in {room=}")
+
+        prev_message = Message.objects.filter(room=room, timestamp__lt=msg.timestamp).order_by("-timestamp").first()
+        return MessageSerializer(prev_message).data
 
     @database_sync_to_async
     def get_user_chat_rooms(self, user):

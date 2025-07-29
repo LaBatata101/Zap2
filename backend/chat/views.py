@@ -2,7 +2,7 @@ from typing import override
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.utils import timezone
@@ -50,13 +50,13 @@ class UserViewSet(viewsets.ModelViewSet[User]):
             # TODO: allow users to send messages to itself
             if target_user == current_user:
                 return Response(
-                    {"error": "You cannot start a DM with yourself."},
+                    {"detail": "You cannot start a DM with yourself."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             room_name = f"dm_{current_user.id}_{target_user.id}"
             # Look for an existing DM room between the two users
-            dm_room = ChatRoom.objects.filter(is_dm=True, name=room_name).first()
+            dm_room = ChatRoom.objects.get(is_dm=True, name=room_name)
 
             if dm_room:
                 serializer = ChatRoomSerializer(dm_room, context={"request": request})
@@ -70,7 +70,7 @@ class UserViewSet(viewsets.ModelViewSet[User]):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except User.DoesNotExist:
-            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 class UserLoginView(views.APIView):
@@ -86,7 +86,7 @@ class UserLoginView(views.APIView):
                 status=status.HTTP_200_OK,
             )
         else:
-            return Response({"error": "Invalid crendentials"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"detail": "Invalid crendentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class UserLogoutView(views.APIView):
@@ -117,7 +117,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet[ChatRoom]):
         room = self.get_object()
         username = request.data.get("username")
         if not username:
-            return Response({"error": "User not provided"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "User not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user_to_invite = User.objects.get(username=username)
@@ -127,7 +127,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet[ChatRoom]):
             room.members.add(user_to_invite)
             return Response({"message": "User invited successfully"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class MessageViewSet(viewsets.ModelViewSet[Message]):
@@ -170,6 +170,23 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
                 pass  # Room doesn’t exist, proceed with default response
 
         return super().list(request, *args, **kwargs)
+
+    @override
+    def destroy(self, request: Request, *args, **kwargs) -> Response:
+        target_message = self.get_object()
+        room = target_message.room
+        # TODO: check if the user has adming privileges
+        if request.user != target_message.user and not request.user.is_superuser and room.owner != request.user:
+            return Response(
+                {
+                    "detail": (
+                        f"{request.user.username} doesn't have enough privileges to delete {target_message.user.username}'s message"
+                    )
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        return super().destroy(request, *args, **kwargs)
 
 
 class MessageMediaViewSet(viewsets.ModelViewSet[MessageMedia]):

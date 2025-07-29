@@ -72,3 +72,15 @@ export type CropAvatarData = {
     containerHeight: number;
     cropSize: number;
 };
+
+export type WebSocketEvent =
+    | {
+          type: "send_message";
+          message: Message;
+      }
+    | {
+          type: "delete_message";
+          message_id: number;
+          room: number;
+          last_message?: { username: string; content: string; timestamp: string; room: number };
+      };

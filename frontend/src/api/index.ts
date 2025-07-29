@@ -144,6 +144,12 @@ export class APIService {
         });
     }
 
+    async deleteMessage(messageId: number) {
+        this.request(`/messages/${messageId}/`, {
+            method: "DELETE",
+        });
+    }
+
     async sendMedia(file: File): Promise<Media> {
         const formData = new FormData();
         formData.append("file", file);
@@ -282,7 +288,7 @@ type EventTypeStrings = keyof typeof EventType;
 
 type Event =
     | { type: EventType.connect | EventType.disconnect; data?: undefined }
-    | { type: EventType.message; data: any }
+    | { type: EventType.message; data: Message }
     | { type: EventType.error; data: any };
 
 export class WebSocketService {
@@ -349,7 +355,15 @@ export class WebSocketService {
 
     sendMessage(message: Message) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify(message));
+            this.socket.send(JSON.stringify({ type: "send_message", message }));
+        }
+    }
+
+    deleteMessage(messageId: number, roomId: number) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(
+                JSON.stringify({ type: "delete_message", message_id: messageId, room: roomId }),
+            );
         }
     }
 
