@@ -188,6 +188,17 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
 
         return super().destroy(request, *args, **kwargs)
 
+    @override
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        target_message = self.get_object()
+        if request.user != target_message.user and not request.user.is_superuser:
+            return Response(
+                {"detail": f"{request.user.username} can only edit its own messages."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        return super().update(request, *args, **kwargs)
+
 
 class MessageMediaViewSet(viewsets.ModelViewSet[MessageMedia]):
     queryset = MessageMedia.objects.all()

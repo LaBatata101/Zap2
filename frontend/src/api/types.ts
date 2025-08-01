@@ -79,6 +79,10 @@ export type WebSocketEvent =
           message: Message;
       }
     | {
+          type: "edit_message";
+          message: Message;
+      }
+    | {
           type: "delete_message";
           message_id: number;
           room: number;

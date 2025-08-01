@@ -35,6 +35,7 @@ enum ChatActionType {
     SetMessagesLoading,
     SendMessage,
     DeleteMessage,
+    EditMessage,
     Error,
 }
 
@@ -91,7 +92,8 @@ type ChatAction =
               lastMessage?: { username: string; content: string; timestamp: string; room: number };
           };
       }
-    | { type: ChatActionType.SendMessage; payload: Message };
+    | { type: ChatActionType.SendMessage; payload: Message }
+    | { type: ChatActionType.EditMessage; payload: Message };
 
 const initialState: ChatState = {
     user: undefined,
@@ -141,6 +143,35 @@ function chatReducer(state: ChatState, action: ChatAction) {
                 ...state,
                 rooms: [...state.rooms, action.payload],
             };
+        case ChatActionType.EditMessage: {
+            const updatedMessage = action.payload;
+            const { rooms, messages } = state;
+
+            const messageIdx = messages.findIndex((message) => message.id === updatedMessage.id);
+            messages[messageIdx] = updatedMessage;
+
+            let updatedRooms = rooms;
+            if (messageIdx === messages.length - 1) {
+                updatedRooms = rooms.map((room) =>
+                    room.id === updatedMessage.room
+                        ? {
+                              ...room,
+                              last_message: {
+                                  username: updatedMessage.user.username,
+                                  message: updatedMessage.content,
+                                  timestamp: updatedMessage.timestamp,
+                              },
+                          }
+                        : room,
+                );
+            }
+
+            return {
+                ...state,
+                rooms: updatedRooms,
+                messages,
+            };
+        }
         case ChatActionType.SendMessage: {
             const message = action.payload;
             const { rooms, currentRoom, messages } = state;
@@ -263,6 +294,7 @@ export const ChatApp = () => {
     } = state;
 
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+    const [messageEdit, setMessageEdit] = useState<Message | null>(null);
 
     const apiService = useRef(new APIService());
     const wsService = useRef(new WebSocketService());
@@ -294,6 +326,9 @@ export const ChatApp = () => {
             switch (event.type) {
                 case "send_message":
                     dispatch({ type: ChatActionType.SendMessage, payload: event.message });
+                    break;
+                case "edit_message":
+                    dispatch({ type: ChatActionType.EditMessage, payload: event.message });
                     break;
                 case "delete_message":
                     dispatch({
@@ -530,6 +565,17 @@ export const ChatApp = () => {
         }
     };
 
+    const handleEditMessage = async (newContent: string) => {
+        try {
+            const response = await apiService.current.editMessage(messageEdit!.id, newContent);
+            wsService.current.editMessage(response.data);
+
+            setMessageEdit(null);
+        } catch (error) {
+            console.error("Failed to edit message: ", error);
+        }
+    };
+
     const handleStartDirectMessage = useCallback(
         async (targetUser: User) => {
             if (!user || user.id === targetUser.id) return;
@@ -546,6 +592,10 @@ export const ChatApp = () => {
 
     const handleCancelReply = useCallback(() => {
         setReplyingTo(null);
+    }, []);
+
+    const handleCancelMessageEdit = useCallback(() => {
+        setMessageEdit(null);
     }, []);
 
     const handleUpdateUserProfile = async (
@@ -629,10 +679,14 @@ export const ChatApp = () => {
                         messages={messages}
                         user={user}
                         onSendMessage={handleSendMessage}
+                        onEditMessageComplete={handleEditMessage}
                         connectionStatus={connectionStatus}
                         replyingTo={replyingTo}
                         onSetReply={setReplyingTo}
+                        messageEdit={messageEdit}
+                        onMessageEdit={setMessageEdit}
                         onCancelReply={handleCancelReply}
+                        onCancelMessageEdit={handleCancelMessageEdit}
                         onMenuClick={handleSidebarToggle}
                         onReplyClick={handleReplyClick}
                         highlightedMessageId={highlightedMessageId}

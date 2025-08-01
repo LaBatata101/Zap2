@@ -10,13 +10,19 @@ import { FilePreviewModal } from "./file_preview";
 export const MessageInput = ({
     isConnected,
     onSendMessage,
+    onEditMessageComplete,
     replyingTo,
+    messageEdit,
     onCancelReply,
+    onCancelMessageEdit,
 }: {
     isConnected: boolean;
     onSendMessage: (content: string, files: File[]) => Promise<void>;
+    onEditMessageComplete: (newContent: string) => Promise<void>;
     replyingTo: types.Message | null;
+    messageEdit: types.Message | null;
     onCancelReply: () => void;
+    onCancelMessageEdit: () => void;
 }) => {
     const [newMessage, setNewMessage] = useState("");
     const [files, setFiles] = useState<File[]>([]);
@@ -26,21 +32,30 @@ export const MessageInput = ({
     const [dragOver, setDragOver] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textFieldRef = useRef<HTMLDivElement>(null);
+    const isEditingMessage = messageEdit !== null;
 
     useEffect(() => {
-        if (replyingTo && textFieldRef.current) {
+        if (messageEdit) {
+            setNewMessage(messageEdit.content);
+        }
+
+        if ((replyingTo || messageEdit) && textFieldRef.current) {
             const inputElement = textFieldRef.current?.querySelector("textarea");
             if (inputElement) {
                 inputElement.focus();
             }
         }
-    }, [replyingTo]);
+    }, [replyingTo, messageEdit]);
 
     const handleSendMessage = async () => {
         if ((!newMessage.trim() && files.length === 0) || loading) return;
         setLoading(true);
         try {
-            await onSendMessage(newMessage.trim(), files);
+            if (messageEdit) {
+                await onEditMessageComplete(newMessage.trim());
+            } else {
+                await onSendMessage(newMessage.trim(), files);
+            }
             setNewMessage("");
             setFiles([]);
         } catch (error) {
@@ -49,6 +64,11 @@ export const MessageInput = ({
             setLoading(false);
         }
     };
+
+    const handleCancelMessageEdit = useCallback(() => {
+        setNewMessage("");
+        onCancelMessageEdit();
+    }, []);
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
@@ -97,7 +117,7 @@ export const MessageInput = ({
         e.preventDefault();
         setDragOver(false);
 
-        if (e.dataTransfer.files) {
+        if (!isEditingMessage && e.dataTransfer.files) {
             const droppedFiles = Array.from(e.dataTransfer.files).filter(
                 (file) => file.type.startsWith("image/") || file.type.startsWith("video/"),
             );
@@ -136,7 +156,7 @@ export const MessageInput = ({
             onDrop={handleDrop}
         >
             {/* Drag overlay */}
-            {dragOver && (
+            {!isEditingMessage && dragOver && (
                 <Box
                     sx={{
                         position: "absolute",
@@ -199,6 +219,45 @@ export const MessageInput = ({
                 </Box>
             )}
 
+            {/* Edit message section */}
+            {messageEdit && (
+                <Box
+                    sx={{
+                        p: 1.5,
+                        mb: 1,
+                        bgcolor: "rgba(59, 130, 246, 0.1)",
+                        borderRadius: 1,
+                        borderLeft: 3,
+                        borderColor: "primary.main",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                    }}
+                >
+                    <Box sx={{ overflow: "hidden" }}>
+                        <Typography variant="subtitle2" color="primary.main" fontWeight="bold">
+                            Edit message
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                            {messageEdit.content}
+                        </Typography>
+                    </Box>
+                    <IconButton
+                        size="small"
+                        onClick={handleCancelMessageEdit}
+                        sx={{
+                            color: "text.secondary",
+                            "&:hover": {
+                                color: "error.main",
+                                backgroundColor: "action.hover",
+                            },
+                        }}
+                    >
+                        <Close fontSize="small" />
+                    </IconButton>
+                </Box>
+            )}
+
             {/* Enhanced Media Preview */}
             <MediaPreview
                 files={files}
@@ -207,6 +266,7 @@ export const MessageInput = ({
             />
 
             <MessageInputActions
+                isEditingMessage={isEditingMessage}
                 newMessage={newMessage}
                 files={files}
                 isConnected={isConnected}

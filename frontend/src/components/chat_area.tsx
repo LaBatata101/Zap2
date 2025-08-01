@@ -25,9 +25,13 @@ type ChatAreaProps = {
     user: types.User;
     connectionStatus: ConnectionStatus;
     onSendMessage: (content: string, files: File[]) => Promise<void>;
+    onEditMessageComplete: (newContent: string) => Promise<void>;
     replyingTo: types.Message | null;
     onSetReply: (message: types.Message) => void;
+    messageEdit: types.Message | null;
+    onMessageEdit: (message: types.Message) => void;
     onCancelReply: () => void;
+    onCancelMessageEdit: () => void;
     onMenuClick: () => void;
     onReplyClick: (messageId: number) => void;
     highlightedMessageId?: number;
@@ -51,10 +55,14 @@ export const ChatArea = ({
     messages,
     user,
     onSendMessage,
+    onEditMessageComplete,
     connectionStatus,
     replyingTo,
     onSetReply,
+    messageEdit,
+    onMessageEdit,
     onCancelReply,
+    onCancelMessageEdit,
     onMenuClick,
     onReplyClick,
     highlightedMessageId,
@@ -202,6 +210,7 @@ export const ChatArea = ({
                 currentUser={user}
                 onReply={onSetReply}
                 onReplyClick={onReplyClick}
+                onMessageEdit={onMessageEdit}
                 highlightedMessageId={highlightedMessageId}
                 firstUnreadIndex={firstUnreadIndex}
                 unreadCount={currentRoom?.unread_count || 0}
@@ -216,8 +225,11 @@ export const ChatArea = ({
             <MessageInput
                 isConnected={isConnected}
                 onSendMessage={onSendMessage}
+                onEditMessageComplete={onEditMessageComplete}
                 replyingTo={replyingTo}
+                messageEdit={messageEdit}
                 onCancelReply={onCancelReply}
+                onCancelMessageEdit={onCancelMessageEdit}
             />
 
             {currentRoom && !isDM && (

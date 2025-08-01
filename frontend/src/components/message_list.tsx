@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { formatDate } from "../helpers/format";
 import { Message, MessageSequenceType } from "./message";
-import { ContentCopy, Delete, KeyboardArrowDown, Reply } from "@mui/icons-material";
+import { ContentCopy, Delete, Edit, KeyboardArrowDown, Reply } from "@mui/icons-material";
 import { UserProfileDialog } from "./dialog/user_profile_dialog";
 import { DialogMode } from "./dialog/common";
 
@@ -27,6 +27,7 @@ interface MessageListProps {
     messages: types.Message[];
     currentUser: types.User;
     onReply: (message: types.Message) => void;
+    onMessageEdit: (message: types.Message) => void;
     onDeleteMessage: (message: types.Message) => void;
     onReplyClick: (messageId: number) => void;
     highlightedMessageId?: number;
@@ -53,6 +54,7 @@ export const MessageList = memo(
         currentUser,
         onReply,
         onReplyClick,
+        onMessageEdit,
         highlightedMessageId,
         firstUnreadIndex,
         unreadCount,
@@ -250,6 +252,13 @@ export const MessageList = memo(
             }
         };
 
+        const handleMessageEdit = () => {
+            if (contextMenu) {
+                onMessageEdit(contextMenu.message);
+                handleClose();
+            }
+        };
+
         const handleCopyText = async () => {
             if (contextMenu) {
                 const type = "text/plain";
@@ -443,6 +452,22 @@ export const MessageList = memo(
                         </ListItemIcon>
                         <ListItemText sx={{ color: "text.primary" }}>Copy Text</ListItemText>
                     </MenuItem>
+                    {(currentUser.is_superuser ||
+                        currentUser.id === contextMenu?.message.user.id) && (
+                        <MenuItem
+                            onClick={handleMessageEdit}
+                            sx={{
+                                "&:hover": {
+                                    bgcolor: "action.hover",
+                                },
+                            }}
+                        >
+                            <ListItemIcon sx={{ color: "text.secondary" }}>
+                                <Edit fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText sx={{ color: "text.primary" }}>Edit</ListItemText>
+                        </MenuItem>
+                    )}
                     {/* TODO: check if user is group ADMIN*/}
                     {(currentUser.is_superuser ||
                         isChatGroupOwner ||

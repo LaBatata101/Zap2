@@ -150,6 +150,13 @@ export class APIService {
         });
     }
 
+    async editMessage(messageId: number, newContent: string) {
+        return this.request(`/messages/${messageId}/`, {
+            method: "PATCH",
+            body: JSON.stringify({ content: newContent }),
+        });
+    }
+
     async sendMedia(file: File): Promise<Media> {
         const formData = new FormData();
         formData.append("file", file);
@@ -356,6 +363,12 @@ export class WebSocketService {
     sendMessage(message: Message) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({ type: "send_message", message }));
+        }
+    }
+
+    editMessage(message: Message) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({ type: "edit_message", message }));
         }
     }
 

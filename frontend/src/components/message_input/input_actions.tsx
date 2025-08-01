@@ -1,10 +1,11 @@
 import { memo } from "react";
 import { CircularProgress, IconButton, Popover, Stack } from "@mui/material";
-import { AttachFile, Send, SentimentSatisfiedAlt } from "@mui/icons-material";
+import { AttachFile, Done, Send, SentimentSatisfiedAlt } from "@mui/icons-material";
 import EmojiPicker, { EmojiClickData, EmojiStyle, Theme } from "emoji-picker-react";
 import { StyledTooltip } from "../styled";
 
 type MessageInputActionsProps = {
+    isEditingMessage: boolean;
     newMessage: string;
     files: File[];
     isConnected: boolean;
@@ -20,6 +21,7 @@ type MessageInputActionsProps = {
 
 export const MessageInputActions = memo(
     ({
+        isEditingMessage,
         newMessage,
         files,
         isConnected,
@@ -37,6 +39,7 @@ export const MessageInputActions = memo(
                 <StyledTooltip title="Attach file">
                     <IconButton
                         onClick={onAttachClick}
+                        disabled={isEditingMessage}
                         sx={{
                             color: "text.secondary",
                             "&:hover": {
@@ -102,7 +105,13 @@ export const MessageInputActions = memo(
                         },
                     }}
                 >
-                    {loading ? <CircularProgress size={20} color="inherit" /> : <Send />}
+                    {loading ? (
+                        <CircularProgress size={20} color="inherit" />
+                    ) : isEditingMessage ? (
+                        <Done />
+                    ) : (
+                        <Send />
+                    )}
                 </IconButton>
             </Stack>
         );

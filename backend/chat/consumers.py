@@ -62,11 +62,18 @@ class UserChatConsumer(AsyncWebsocketConsumer):
                         "room": data["room"],
                     },
                 )
+            case "edit_message":
+                await self.channel_layer.group_send(
+                    f"chat_{data["message"]["room"]}", {"type": "chat.edit.message", "updated_message": text_data}
+                )
             case t:
                 raise Exception(f"Message type not handled: {t}")
 
     async def chat_message(self, event):
         await self.send(text_data=event["message"])
+
+    async def chat_edit_message(self, event):
+        await self.send(text_data=event["updated_message"])
 
     async def chat_delete_message(self, event):
         last_msg = await self.get_prev_message_of_id(event["message_id"], event["room"])
