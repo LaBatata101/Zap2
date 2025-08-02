@@ -2,8 +2,13 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 
 import * as types from "../api/types";
 import {
     Box,
+    Button,
     Chip,
     CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
     Fab,
     ListItemIcon,
     ListItemText,
@@ -72,6 +77,8 @@ export const MessageList = memo(
         const [showScrollButton, setShowScrollButton] = useState(false);
         const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
         const [profileDialogData, setProfileDialogData] = useState<types.User | null>(null);
+        const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+        const [messageToDelete, setMessageToDelete] = useState<types.Message | null>(null);
         const firstUnreadRef = useRef<HTMLDivElement>(null);
         const prevMessagesLength = useRef(0);
 
@@ -271,11 +278,25 @@ export const MessageList = memo(
             }
         };
 
-        const handleDelete = () => {
+        const handleMessageDelete = () => {
             if (contextMenu) {
-                onDeleteMessage(contextMenu.message);
+                setMessageToDelete(contextMenu.message);
+                setDeleteConfirmOpen(true);
                 handleClose();
             }
+        };
+
+        const handleDeleteConfirm = () => {
+            if (messageToDelete) {
+                onDeleteMessage(messageToDelete);
+                setDeleteConfirmOpen(false);
+                setMessageToDelete(null);
+            }
+        };
+
+        const handleDeleteCancel = () => {
+            setDeleteConfirmOpen(false);
+            setMessageToDelete(null);
         };
 
         const scrollToBottom = () => {
@@ -473,7 +494,7 @@ export const MessageList = memo(
                         isChatGroupOwner ||
                         currentUser.id === contextMenu?.message.user.id) && (
                         <MenuItem
-                            onClick={handleDelete}
+                            onClick={handleMessageDelete}
                             sx={{
                                 "&:hover": {
                                     bgcolor: "action.hover",
@@ -487,6 +508,62 @@ export const MessageList = memo(
                         </MenuItem>
                     )}
                 </Menu>
+
+                {/* Delete Confirmation Dialog */}
+                <Dialog
+                    open={deleteConfirmOpen}
+                    onClose={handleDeleteCancel}
+                    aria-labelledby="delete-dialog-title"
+                    aria-describedby="delete-dialog-description"
+                    sx={{
+                        "& .MuiDialog-paper": {
+                            bgcolor: "background.paper",
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 2,
+                            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+                        },
+                    }}
+                >
+                    <DialogContent>
+                        <DialogContentText
+                            id="delete-dialog-description"
+                            sx={{ color: "text.secondary" }}
+                        >
+                            Do you want to delete this message?
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 2 }}>
+                        <Button
+                            onClick={handleDeleteCancel}
+                            variant="outlined"
+                            sx={{
+                                borderColor: "divider",
+                                color: "text.primary",
+                                "&:hover": {
+                                    borderColor: "primary.main",
+                                    bgcolor: "action.hover",
+                                },
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDeleteConfirm}
+                            variant="contained"
+                            color="error"
+                            sx={{
+                                bgcolor: "error.main",
+                                "&:hover": {
+                                    bgcolor: "error.dark",
+                                },
+                            }}
+                        >
+                            Delete
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
                 {profileDialogData && (
                     <UserProfileDialog
                         user={profileDialogData}
