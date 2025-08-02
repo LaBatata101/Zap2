@@ -76,31 +76,42 @@ class UserChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=event["updated_message"])
 
     async def chat_delete_message(self, event):
-        last_msg = await self.get_prev_message_of_id(event["message_id"], event["room"])
-        await self.send(
-            text_data=json.dumps(
-                {
-                    "type": "delete_message",
-                    "message_id": event["message_id"],
-                    "room": event["room"],
-                    "last_message": {
-                        "username": last_msg["user"]["username"],
-                        "content": last_msg["content"],
-                        "timestamp": last_msg["timestamp"],
-                        "room": last_msg["room"],
-                    },
+        response_data = {
+            "type": "delete_message",
+            "message_id": event["message_id"],
+            "room": event["room"],
+        }
+
+        is_last_message = await self.is_last_message_in_room(event["message_id"], event["room"])
+        if is_last_message:
+            last_msg = await self.get_prev_message_of_id(event["message_id"], event["room"])
+            if last_msg:
+                response_data["last_message"] = {
+                    "username": last_msg["user"]["username"],
+                    "content": last_msg["content"],
+                    "timestamp": last_msg["timestamp"],
+                    "room": last_msg["room"],
                 }
-            )
-        )
+
+        await self.send(text_data=json.dumps(response_data))
+
+    @database_sync_to_async
+    def is_last_message_in_room(self, message_id, room):
+        try:
+            msg = Message.objects.get(id=message_id)
+            last_message = Message.objects.filter(room=room).order_by("-timestamp").first()
+            return last_message and msg.id == last_message.id
+        except Message.DoesNotExist:
+            return False
 
     @database_sync_to_async
     def get_prev_message_of_id(self, message_id, room):
-        msg = Message.objects.get(id=message_id)
-        if not msg:
+        try:
+            msg = Message.objects.get(id=message_id)
+            prev_message = Message.objects.filter(room=room, timestamp__lt=msg.timestamp).order_by("-timestamp").first()
+            return MessageSerializer(prev_message).data if prev_message else None
+        except Message.DoesNotExist:
             raise Exception(f"Message with {message_id=} not found in {room=}")
-
-        prev_message = Message.objects.filter(room=room, timestamp__lt=msg.timestamp).order_by("-timestamp").first()
-        return MessageSerializer(prev_message).data
 
     @database_sync_to_async
     def get_user_chat_rooms(self, user):

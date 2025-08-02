@@ -259,7 +259,7 @@ function chatReducer(state: ChatState, action: ChatAction) {
                                     message: lastMessage.content,
                                     timestamp: lastMessage.timestamp,
                                 }
-                              : undefined,
+                              : room.last_message,
                           unread_count: lastMessage ? room.unread_count - 1 : room.unread_count,
                       }
                     : room,
