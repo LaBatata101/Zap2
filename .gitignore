@@ -13,3 +13,5 @@ wheels/
 .tsbuildinfo
 
 .env
+
+node_modules/
