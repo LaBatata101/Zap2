@@ -14,7 +14,7 @@ import {
 import { Message as MessageIcon, Menu as MenuIcon } from "@mui/icons-material";
 import { MessageList } from "./message_list";
 import { MessageInput } from "./message_input";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RoomDetailsDialog } from "./dialog/chat_group_details_dialog";
 import { DialogMode } from "./dialog/common";
 import { UserProfileDialog } from "./dialog/user_profile_dialog";
@@ -83,7 +83,11 @@ export const ChatArea = ({
             : null;
     const [isRoomDetailsOpen, setRoomDetailsOpen] = useState(false);
     const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
-    const [recipient, setRecipient] = useState(currentRoom?.dm_recipient);
+    const [recipient, setRecipient] = useState<types.User | null>(null);
+
+    useEffect(() => {
+        setRecipient(currentRoom!.dm_recipient!);
+    }, [currentRoom]);
 
     const handleHeaderClick = () => {
         if (currentRoom?.is_dm) {
