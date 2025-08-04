@@ -94,6 +94,8 @@ type SidebarProps = {
         avatar: File | null,
         cropAvatarData: CropAvatarData | null,
     ) => Promise<boolean>;
+
+    onStartDirectMessage: (user: User) => void;
 };
 
 export const Sidebar = ({
@@ -109,6 +111,7 @@ export const Sidebar = ({
     isOpen,
     onToggle,
     onUpdateProfile,
+    onStartDirectMessage,
 }: SidebarProps) => {
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [newRoomName, setNewRoomName] = useState("");
@@ -334,11 +337,10 @@ export const Sidebar = ({
             <UserProfileDialog
                 user={user}
                 isOpen={isProfileDialogOpen}
-                mode={DialogMode.Edit}
+                mode={DialogMode.CurrentUser}
                 onClose={() => setProfileDialogOpen(false)}
                 onStartDirectMessage={(user) => {
-                    // TODO: save messages when DM'ing itself
-                    console.log("Start direct message with", user.username);
+                    onStartDirectMessage(user);
                     setProfileDialogOpen(false);
                 }}
                 onUpdateProfile={onUpdateProfile}

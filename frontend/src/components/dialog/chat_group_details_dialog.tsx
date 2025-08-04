@@ -570,10 +570,10 @@ export const RoomDetailsDialog = ({
                 sx={{
                     p: 3,
                     pt: 2,
-                    justifyContent: mode === DialogMode.Edit ? "space-between" : "center",
+                    justifyContent: mode === DialogMode.CurrentUser ? "space-between" : "center",
                 }}
             >
-                {mode === DialogMode.Edit &&
+                {mode === DialogMode.CurrentUser &&
                     (isEditing ? (
                         <>
                             <ActionButton

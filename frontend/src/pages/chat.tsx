@@ -578,7 +578,7 @@ export const ChatApp = () => {
 
     const handleStartDirectMessage = useCallback(
         async (targetUser: User) => {
-            if (!user || user.id === targetUser.id) return;
+            if (!user) return;
             try {
                 const room = await apiService.current.startDirectMessage(targetUser.username);
                 dispatch({ type: ChatActionType.AddRoom, payload: room });

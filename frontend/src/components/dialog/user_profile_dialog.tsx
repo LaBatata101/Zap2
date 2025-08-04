@@ -24,6 +24,7 @@ import {
     Cancel,
     MessageOutlined,
     CheckCircle,
+    Bookmark,
 } from "@mui/icons-material";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ImageCropEditor } from "../image_crop_editor";
@@ -469,7 +470,7 @@ export const UserProfileDialog = ({
                 sx={{
                     p: 3,
                     pt: 2,
-                    justifyContent: mode === DialogMode.Edit ? "space-between" : "center",
+                    justifyContent: mode === DialogMode.CurrentUser ? "space-between" : "center",
                 }}
             >
                 {isEditing ? (
@@ -493,7 +494,7 @@ export const UserProfileDialog = ({
                     </>
                 ) : (
                     <>
-                        {mode === DialogMode.Edit && (
+                        {mode === DialogMode.CurrentUser && (
                             <ActionButton
                                 onClick={() => setIsEditing(true)}
                                 startIcon={<Edit />}
@@ -506,10 +507,16 @@ export const UserProfileDialog = ({
                             <ActionButton
                                 onClick={() => onStartDirectMessage(user)}
                                 variant="contained"
-                                startIcon={<MessageOutlined />}
+                                startIcon={
+                                    mode === DialogMode.CurrentUser ? (
+                                        <Bookmark />
+                                    ) : (
+                                        <MessageOutlined />
+                                    )
+                                }
                                 sx={{ minWidth: 160 }}
                             >
-                                Start Chat
+                                {mode === DialogMode.CurrentUser ? "Save messages" : "Start Chat"}
                             </ActionButton>
                         )}
                     </>

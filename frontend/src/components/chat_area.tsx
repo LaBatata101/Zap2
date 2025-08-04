@@ -11,7 +11,7 @@ import {
     useTheme,
     useMediaQuery,
 } from "@mui/material";
-import { Message as MessageIcon, Menu as MenuIcon } from "@mui/icons-material";
+import { Message as MessageIcon, Menu as MenuIcon, Bookmark } from "@mui/icons-material";
 import { MessageList } from "./message_list";
 import { MessageInput } from "./message_input";
 import { useEffect, useState } from "react";
@@ -129,6 +129,8 @@ export const ChatArea = ({
     }
 
     const isDM = currentRoom.is_dm;
+    const isDmItself = isDM && recipient?.id === user.id;
+
     const isChatGroupOwner = currentRoom.owner === user.username;
     const displayName = isDM ? recipient?.username : currentRoom.name;
     const displayAvatar = isDM ? recipient?.profile.avatar_img : currentRoom.avatar_img;
@@ -183,7 +185,17 @@ export const ChatArea = ({
                             "&:hover": { backgroundColor: "action.hover" },
                         }}
                     >
-                        {displayAvatar ? (
+                        {isDmItself ? (
+                            <Avatar
+                                sx={{
+                                    mr: 2,
+                                    background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
+                                }}
+                            >
+                                <Bookmark />
+                            </Avatar>
+                        ) : displayAvatar ? (
                             <Avatar sx={{ mr: 2 }}>
                                 <img src={displayAvatar} alt="Group avatar image" />
                             </Avatar>
@@ -203,7 +215,7 @@ export const ChatArea = ({
                             color="text.primary"
                             sx={{ flexGrow: 1, fontWeight: 600 }}
                         >
-                            {displayName}
+                            {isDmItself ? "Saved messages" : displayName}
                         </Typography>
                     </Box>
                 </Toolbar>
@@ -240,7 +252,11 @@ export const ChatArea = ({
                 <RoomDetailsDialog
                     room={currentRoom}
                     isOpen={isRoomDetailsOpen}
-                    mode={currentRoom.owner === user.username ? DialogMode.Edit : DialogMode.View}
+                    mode={
+                        currentRoom.owner === user.username
+                            ? DialogMode.CurrentUser
+                            : DialogMode.View
+                    }
                     onUpdateRoom={onUpdateRoom}
                     onClose={() => setRoomDetailsOpen(false)}
                     onLoadMembers={onLoadMembers}

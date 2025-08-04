@@ -204,8 +204,15 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
         if not obj.is_dm:
             return None
 
-        current_user = self.context["request"].user
-        recipient = obj.members.exclude(id=current_user.id).first()
+        request_user = self.context["request"].user
+        members = obj.members.all()
+        if members.count() == 1:
+            # Messaging yourself
+            recipient = members.first()
+        else:
+            # Messaging another user
+            recipient = members.exclude(id=request_user.id).first()
+
         if recipient:
             return UserSerializer(recipient, context=self.context).data
         return None

@@ -11,6 +11,7 @@ import {
     Box,
 } from "@mui/material";
 import { formatTime } from "../helpers/format";
+import { Bookmark } from "@mui/icons-material";
 
 type RoomListItemProps = {
     room: ChatRoom;
@@ -24,6 +25,7 @@ export const RoomListItem = memo(
         const isDM = room.is_dm;
         const recipient = room.dm_recipient;
 
+        const isDmItself = isDM && recipient?.id === currentUser.id;
         const displayName = isDM ? recipient?.username : room.name;
         const displayAvatar = isDM ? recipient?.profile.avatar_img : room.avatar_img;
         const avatarFallback = (isDM ? recipient?.username : room.name)?.charAt(0).toUpperCase();
@@ -55,7 +57,21 @@ export const RoomListItem = memo(
                     }}
                 >
                     <ListItemAvatar>
-                        {displayAvatar ? (
+                        {isDmItself ? (
+                            <Avatar
+                                sx={{
+                                    background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                    boxShadow: isSelected
+                                        ? "0 4px 12px rgba(59, 130, 246, 0.4)"
+                                        : "0 2px 8px rgba(0, 0, 0, 0.2)",
+                                    width: 48,
+                                    height: 48,
+                                    transition: "box-shadow 0.2s ease-in-out",
+                                }}
+                            >
+                                <Bookmark />
+                            </Avatar>
+                        ) : displayAvatar ? (
                             <Avatar sx={{ width: 48, height: 48 }}>
                                 <img src={displayAvatar} alt="Avatar image" />
                             </Avatar>
@@ -86,7 +102,7 @@ export const RoomListItem = memo(
                                         transition: "color 0.2s ease-in-out",
                                     }}
                                 >
-                                    {displayName}
+                                    {isDmItself ? "Saved messages" : displayName}
                                 </Typography>
                                 <Typography
                                     variant="caption"
