@@ -19,6 +19,7 @@ class Profile(models.Model):
 class Membership(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     room = models.ForeignKey("ChatRoom", on_delete=models.CASCADE)
+    is_admin = models.BooleanField(default=False)
     last_read_timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:

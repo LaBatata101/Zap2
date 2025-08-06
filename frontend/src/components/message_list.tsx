@@ -303,6 +303,16 @@ export const MessageList = memo(
             messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         };
 
+        const canDeleteMessage = () => {
+            return (
+                isChatGroupOwner ||
+                currentUser.is_admin ||
+                currentUser.is_superuser ||
+                // Check if user is message owner
+                currentUser.id === contextMenu?.message.user.id
+            );
+        };
+
         return (
             <Box
                 ref={scrollContainerRef}
@@ -489,10 +499,7 @@ export const MessageList = memo(
                             <ListItemText sx={{ color: "text.primary" }}>Edit</ListItemText>
                         </MenuItem>
                     )}
-                    {/* TODO: check if user is group ADMIN*/}
-                    {(currentUser.is_superuser ||
-                        isChatGroupOwner ||
-                        currentUser.id === contextMenu?.message.user.id) && (
+                    {canDeleteMessage() && (
                         <MenuItem
                             onClick={handleMessageDelete}
                             sx={{

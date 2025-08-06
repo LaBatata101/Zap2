@@ -623,12 +623,12 @@ export const ChatApp = () => {
         return false;
     };
 
-    const loadGroupMembers = async (members: string[]) => {
-        return await Promise.all(
-            members.map((member) => {
-                return apiService.current.getUser(member);
-            }),
-        );
+    const loadGroupMembers = async (roomId: number) => {
+        return await apiService.current.getRoomMembers(roomId);
+    };
+
+    const handleToggleAdmin = async (roomId: number, username: string, value: boolean) => {
+        return await apiService.current.updateChatMemberAdminStatus(roomId, username, value);
     };
 
     if (!user) {
@@ -659,6 +659,7 @@ export const ChatApp = () => {
                     isOpen={isSidebarOpen}
                     onToggle={handleSidebarToggle}
                     onUpdateProfile={handleUpdateUserProfile}
+                    onStartDirectMessage={handleStartDirectMessage}
                 />
                 <Box
                     component="main"
@@ -697,6 +698,7 @@ export const ChatApp = () => {
                         onLoadMembers={loadGroupMembers}
                         onStartDirectMessage={handleStartDirectMessage}
                         onDeleteMessage={handleDeleteMessage}
+                        onToggleAdmin={handleToggleAdmin}
                     />
                 </Box>
             </Box>

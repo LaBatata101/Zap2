@@ -30,7 +30,6 @@ import {
     People,
     ExpandMore,
     ExpandLess,
-    Star,
 } from "@mui/icons-material";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ImageCropEditor } from "../image_crop_editor";
@@ -44,6 +43,7 @@ import {
 } from "./common";
 
 type RoomDetailsDialogProps = {
+    currentUser: User;
     room: ChatRoom;
     mode: DialogMode;
     isOpen: boolean;
@@ -55,11 +55,13 @@ type RoomDetailsDialogProps = {
         avatar: File | null,
         cropAvatarData: CropAvatarData | null,
     ) => Promise<boolean>;
-    onLoadMembers: (members: string[]) => Promise<User[]>;
+    onLoadMembers: (roomId: number) => Promise<User[]>;
     onProfileView: (user: User) => void;
+    onToggleAdmin: (roomId: number, username: string, value: boolean) => Promise<User>;
 };
 
 export const RoomDetailsDialog = ({
+    currentUser,
     room,
     isOpen,
     onClose,
@@ -67,6 +69,7 @@ export const RoomDetailsDialog = ({
     mode,
     onLoadMembers,
     onProfileView,
+    onToggleAdmin,
 }: RoomDetailsDialogProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState("");
@@ -109,11 +112,9 @@ export const RoomDetailsDialog = ({
     }, [success]);
 
     const loadMembers = async () => {
-        if (room.members.length === 0) return;
-
         setLoadingMembers(true);
         try {
-            const loadedMembers = await onLoadMembers(room.members);
+            const loadedMembers = await onLoadMembers(room.id);
             setMembers(loadedMembers);
         } catch (error) {
             console.error("Failed to load members:", error);
@@ -175,7 +176,23 @@ export const RoomDetailsDialog = ({
         return user.username.charAt(0).toUpperCase();
     };
 
+    const handleToggleAdmin = async (username: string, value: boolean) => {
+        const user = await onToggleAdmin(room.id, username, value);
+        if (user) {
+            setMembers((prevMembers) =>
+                prevMembers.map((member) =>
+                    member.id === user.id ? { ...member, is_admin: value } : member,
+                ),
+            );
+        }
+    };
+
+    const isAdmin = (user: User) => user.is_admin;
     const isOwner = (user: User) => user.username === room.owner;
+
+    const canManageAdmins = (user: User) => {
+        return isAdmin(user) || user.is_superuser || isOwner(user);
+    };
 
     return (
         <StyledDialog open={isOpen} onClose={onClose} fullWidth maxWidth="xs">
@@ -485,11 +502,7 @@ export const RoomDetailsDialog = ({
                                 ) : (
                                     <List sx={{ py: 0 }}>
                                         {members.map((member, _) => (
-                                            <Box
-                                                key={member.id}
-                                                onClick={() => onProfileView(member)}
-                                                sx={{ cursor: "pointer" }}
-                                            >
+                                            <Box key={member.id}>
                                                 <ListItem
                                                     sx={{
                                                         px: 0,
@@ -500,60 +513,153 @@ export const RoomDetailsDialog = ({
                                                         },
                                                     }}
                                                 >
-                                                    <ListItemAvatar>
-                                                        <Avatar
-                                                            sx={{
-                                                                width: 40,
-                                                                height: 40,
-                                                                border: isOwner(member)
-                                                                    ? "2px solid"
-                                                                    : "none",
-                                                                borderColor: "warning.main",
-                                                            }}
-                                                        >
-                                                            {getAvatarContent(member)}
-                                                        </Avatar>
-                                                    </ListItemAvatar>
-                                                    <ListItemText
-                                                        primary={
-                                                            <Box
+                                                    <Box
+                                                        sx={{
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            width: "100%",
+                                                            cursor: "pointer",
+                                                        }}
+                                                        onClick={() => onProfileView(member)}
+                                                    >
+                                                        <ListItemAvatar>
+                                                            <Avatar
                                                                 sx={{
-                                                                    display: "flex",
-                                                                    alignItems: "center",
-                                                                    gap: 1,
+                                                                    width: 40,
+                                                                    height: 40,
+                                                                    border: isOwner(member)
+                                                                        ? "2px solid"
+                                                                        : isAdmin(member)
+                                                                          ? "2px solid"
+                                                                          : "none",
+                                                                    borderColor: isOwner(member)
+                                                                        ? "warning.main"
+                                                                        : "info.main",
                                                                 }}
                                                             >
-                                                                <Typography
-                                                                    variant="body2"
-                                                                    fontWeight={500}
+                                                                {getAvatarContent(member)}
+                                                            </Avatar>
+                                                        </ListItemAvatar>
+                                                        <ListItemText
+                                                            primary={
+                                                                <Box
+                                                                    sx={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent:
+                                                                            "space-between",
+                                                                        width: "100%",
+                                                                    }}
                                                                 >
-                                                                    {member.username}
-                                                                </Typography>
-                                                                {isOwner(member) && (
-                                                                    <Tooltip title="Group Owner">
-                                                                        <Star
-                                                                            sx={{
-                                                                                fontSize: 16,
-                                                                                color: "warning.main",
-                                                                            }}
-                                                                        />
-                                                                    </Tooltip>
-                                                                )}
-                                                                {/* TODO: display chip for ADMINS */}
-                                                                {member.username === room.owner && (
-                                                                    <Chip
-                                                                        label="Owner"
-                                                                        size="small"
-                                                                        color="error"
+                                                                    <Box
                                                                         sx={{
-                                                                            height: 18,
-                                                                            fontSize: "0.7rem",
+                                                                            display: "flex",
+                                                                            alignItems: "center",
+                                                                            gap: 1,
+                                                                            flex: 1,
                                                                         }}
-                                                                    />
-                                                                )}
-                                                            </Box>
-                                                        }
-                                                    />
+                                                                    >
+                                                                        <Typography
+                                                                            variant="body2"
+                                                                            fontWeight={500}
+                                                                        >
+                                                                            {member.username}
+                                                                        </Typography>
+
+                                                                        {/* Role indicators */}
+                                                                        {isOwner(member) && (
+                                                                            <Chip
+                                                                                label="Owner"
+                                                                                size="small"
+                                                                                color="warning"
+                                                                                variant="outlined"
+                                                                                sx={{
+                                                                                    height: 20,
+                                                                                    fontSize:
+                                                                                        "0.7rem",
+                                                                                    fontWeight: 600,
+                                                                                }}
+                                                                            />
+                                                                        )}
+
+                                                                        {isAdmin(member) &&
+                                                                            !isOwner(member) && (
+                                                                                <Chip
+                                                                                    label="Admin"
+                                                                                    size="small"
+                                                                                    color="info"
+                                                                                    variant="outlined"
+                                                                                    sx={{
+                                                                                        height: 20,
+                                                                                        fontSize:
+                                                                                            "0.7rem",
+                                                                                        fontWeight: 600,
+                                                                                    }}
+                                                                                />
+                                                                            )}
+                                                                    </Box>
+
+                                                                    {/* Admin toggle - only show for owner, admins and superuser */}
+                                                                    {canManageAdmins(member) &&
+                                                                        !isOwner(member) &&
+                                                                        member.id !==
+                                                                            currentUser.id && (
+                                                                            <Box
+                                                                                sx={{
+                                                                                    display: "flex",
+                                                                                    alignItems:
+                                                                                        "center",
+                                                                                    ml: 1,
+                                                                                }}
+                                                                                onClick={(e) =>
+                                                                                    e.stopPropagation()
+                                                                                } // Prevent profile view when clicking admin controls
+                                                                            >
+                                                                                <Tooltip
+                                                                                    title={
+                                                                                        isAdmin(
+                                                                                            member,
+                                                                                        )
+                                                                                            ? "Remove admin privileges"
+                                                                                            : "Make admin"
+                                                                                    }
+                                                                                    arrow
+                                                                                >
+                                                                                    <Switch
+                                                                                        checked={isAdmin(
+                                                                                            member,
+                                                                                        )}
+                                                                                        onChange={(
+                                                                                            e,
+                                                                                        ) =>
+                                                                                            handleToggleAdmin(
+                                                                                                member.username,
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .checked,
+                                                                                            )
+                                                                                        }
+                                                                                        size="small"
+                                                                                        color="info"
+                                                                                        sx={{
+                                                                                            "& .MuiSwitch-thumb":
+                                                                                                {
+                                                                                                    width: 16,
+                                                                                                    height: 16,
+                                                                                                },
+                                                                                            "& .MuiSwitch-track":
+                                                                                                {
+                                                                                                    borderRadius: 10,
+                                                                                                },
+                                                                                        }}
+                                                                                    />
+                                                                                </Tooltip>
+                                                                            </Box>
+                                                                        )}
+                                                                </Box>
+                                                            }
+                                                        />
+                                                    </Box>
                                                 </ListItem>
                                             </Box>
                                         ))}

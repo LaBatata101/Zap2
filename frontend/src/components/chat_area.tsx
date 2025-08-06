@@ -45,9 +45,10 @@ type ChatAreaProps = {
         avatar: File | null,
         cropAvatarData: types.CropAvatarData | null,
     ) => Promise<boolean>;
-    onLoadMembers: (members: string[]) => Promise<types.User[]>;
+    onLoadMembers: (roomId: number) => Promise<types.User[]>;
     onStartDirectMessage: (user: types.User) => void;
     onDeleteMessage: (message: types.Message) => void;
+    onToggleAdmin: (roomId: number, username: string, value: boolean) => Promise<types.User>;
 };
 
 export const ChatArea = ({
@@ -73,6 +74,7 @@ export const ChatArea = ({
     onLoadMembers,
     onStartDirectMessage,
     onDeleteMessage,
+    onToggleAdmin,
 }: ChatAreaProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -86,7 +88,9 @@ export const ChatArea = ({
     const [recipient, setRecipient] = useState<types.User | null>(null);
 
     useEffect(() => {
-        setRecipient(currentRoom!.dm_recipient!);
+        if (currentRoom?.dm_recipient) {
+            setRecipient(currentRoom.dm_recipient);
+        }
     }, [currentRoom]);
 
     const handleHeaderClick = () => {
@@ -250,6 +254,7 @@ export const ChatArea = ({
 
             {currentRoom && !isDM && (
                 <RoomDetailsDialog
+                    currentUser={user}
                     room={currentRoom}
                     isOpen={isRoomDetailsOpen}
                     mode={
@@ -264,6 +269,7 @@ export const ChatArea = ({
                         setRecipient(user);
                         setProfileDialogOpen(true);
                     }}
+                    onToggleAdmin={onToggleAdmin}
                 />
             )}
             {/* This is used to display the user information in the chat area, when clicked in the toolbar, or

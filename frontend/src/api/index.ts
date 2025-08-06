@@ -114,6 +114,19 @@ export class APIService {
         return response.data;
     }
 
+    async getRoomMembers(roomId: number): Promise<User[]> {
+        const response = await this.request(`/rooms/${roomId}/members/`);
+        return response.data;
+    }
+
+    async updateChatMemberAdminStatus(roomId: number, username: string, value: boolean) {
+        const response = await this.request(`/rooms/${roomId}/update-admin/`, {
+            method: "POST",
+            body: JSON.stringify({ username, is_admin: value }),
+        });
+        return response.data;
+    }
+
     async createRoom(name: string): Promise<ChatRoom> {
         const response = await this.request("/rooms/", {
             method: "POST",

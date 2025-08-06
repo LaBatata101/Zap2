@@ -2,6 +2,7 @@ export type User = {
     id: number;
     username: string;
     is_superuser: boolean;
+    is_admin: boolean;
     profile: UserProfile;
 };
 
@@ -41,7 +42,6 @@ export type ChatRoom = {
     avatar_img?: string;
     is_private: boolean;
     description: string;
-    members: string[];
     is_dm: boolean;
     dm_recipient: User | null;
 };

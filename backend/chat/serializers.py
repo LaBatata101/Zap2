@@ -144,9 +144,14 @@ class MessageSerializer(serializers.ModelSerializer[Message]):
         return message
 
 
+class MembershipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Membership
+        fields = ("user", "room", "is_admin")
+
+
 class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
     owner = serializers.ReadOnlyField(source="owner.username")
-    members = serializers.StringRelatedField(many=True, read_only=True)
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     dm_recipient = serializers.SerializerMethodField()
@@ -162,7 +167,6 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
             "is_dm",
             "dm_recipient",
             "owner",
-            "members",
             "last_message",
             "unread_count",
         )

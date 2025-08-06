@@ -8,7 +8,8 @@ from django.middleware.csrf import get_token
 from django.utils import timezone
 from rest_framework import permissions, status, views, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.generics import get_object_or_404
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -26,7 +27,15 @@ class UserViewSet(viewsets.ModelViewSet[User]):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [UserPermissions]
-    lookup_field = "username"
+
+    def get_object(self):
+        lookup_value = self.kwargs.get(self.lookup_field)
+
+        # Try to interpret as integer ID first
+        if lookup_value.isdigit():
+            return get_object_or_404(User, id=int(lookup_value))
+        # Fallback to username
+        return get_object_or_404(User, username=lookup_value)
 
     @action(
         methods=["get"],
@@ -122,6 +131,79 @@ class ChatRoomViewSet(viewsets.ModelViewSet[ChatRoom]):
         except User.DoesNotExist:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=True, methods=["GET"], permission_classes=[permissions.IsAuthenticated], url_path="members")
+    def list_members(self, request, pk=None):
+        room = self.get_object()
+        memberships = Membership.objects.filter(room=room).select_related("user")
+        data = []
+        if room.is_dm:
+            for membership in memberships:
+                data.append(
+                    UserSerializer(membership.user, context=self.get_serializer_context()).data,
+                )
+        else:
+            for membership in memberships:
+                data.append(
+                    {
+                        **UserSerializer(membership.user, context=self.get_serializer_context()).data,
+                        "is_admin": membership.is_admin,
+                    }
+                )
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["POST"],
+        url_path="update-admin",
+        permission_classes=[permissions.IsAuthenticated],
+        parser_classes=[JSONParser],
+    )
+    def update_admin(self, request, pk=None):
+        room = self.get_object()
+        current_user = request.user
+
+        if room.is_dm:
+            return Response({"detail": "DM chats don't have admins."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            requester_membership = Membership.objects.get(user=current_user, room=room)
+        except Membership.DoesNotExist:
+            return Response({"detail": "You are not a member of this room."}, status=status.HTTP_403_FORBIDDEN)
+
+        if room.owner != current_user and not requester_membership.is_admin and not current_user.is_superuser:
+            return Response(
+                {"detail": "You are not allowed to update admin status."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        username = request.data.get("username")
+        is_admin = request.data.get("is_admin")
+
+        if username is None or is_admin is None:
+            return Response(
+                {"detail": "Both 'username' and 'is_admin' are required."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            target_user = User.objects.get(username=username)
+            membership = Membership.objects.get(user=target_user, room=room)
+        except User.DoesNotExist:
+            return Response({"detail": f"User '{username}' not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Membership.DoesNotExist:
+            return Response(
+                {"detail": f"User '{username}' is not a member of the room."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        membership.is_admin = is_admin
+        membership.save()
+
+        return Response(
+            {
+                **UserSerializer(target_user, context=self.get_serializer_context()).data,
+                "is_admin": membership.is_admin,
+            },
+            status=status.HTTP_200_OK,
+        )
+
 
 class MessageViewSet(viewsets.ModelViewSet[Message]):
     queryset = Message.objects.all()
@@ -146,19 +228,9 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
         if room_id:
             try:
                 room = ChatRoom.objects.get(id=room_id)
-                if not room.is_private:
-                    # For public rooms, create membership if it doesn’t exist
-                    membership = Membership.objects.get(user=request.user, room=room)
-                    membership.last_read_timestamp = timezone.now()
-                    membership.save()
-                else:
-                    # For private rooms, update only if user is a member
-                    try:
-                        membership = Membership.objects.get(user=request.user, room=room)
-                        membership.last_read_timestamp = timezone.now()
-                        membership.save()
-                    except Membership.DoesNotExist:
-                        pass  # User isn’t a member of this private room
+                membership = Membership.objects.get(user=request.user, room=room)
+                membership.last_read_timestamp = timezone.now()
+                membership.save()
             except ChatRoom.DoesNotExist:
                 pass  # Room doesn’t exist, proceed with default response
 
@@ -168,8 +240,13 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
     def destroy(self, request: Request, *args, **kwargs) -> Response:
         target_message = self.get_object()
         room = target_message.room
-        # TODO: check if the user has adming privileges
-        if request.user != target_message.user and not request.user.is_superuser and room.owner != request.user:
+        membership = Membership.objects.get(room=room, user=request.user)
+        if (
+            request.user != target_message.user
+            and not request.user.is_superuser
+            and room.owner != request.user
+            and not membership.is_admin
+        ):
             return Response(
                 {
                     "detail": (
