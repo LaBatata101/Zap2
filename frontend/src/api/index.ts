@@ -5,6 +5,7 @@ import {
     Media,
     Message,
     MessagePayload,
+    MessageReaction,
     PaginatedResponse,
     RegistrationCredentials,
     User,
@@ -170,6 +171,26 @@ export class APIService {
         });
     }
 
+    async addMessageReaction(messageId: number, emoji: string) {
+        return this.request(`/messages/${messageId}/reactions/`, {
+            method: "POST",
+            body: JSON.stringify({ emoji }),
+        });
+    }
+
+    async updateMessageReaction(messageId: number, reactionId: number, newEmoji: string) {
+        return this.request(`/messages/${messageId}/reactions/${reactionId}/`, {
+            method: "PATCH",
+            body: JSON.stringify({ emoji: newEmoji }),
+        });
+    }
+
+    async deleteMessageReaction(messageId: number, reactionId: number) {
+        this.request(`/messages/${messageId}/reactions/${reactionId}/`, {
+            method: "DELETE",
+        });
+    }
+
     async sendMedia(file: File): Promise<Media> {
         const formData = new FormData();
         formData.append("file", file);
@@ -290,6 +311,7 @@ export class APIService {
         );
     }
 }
+
 type ConnectCallback = () => void;
 type DisconnectCallback = () => void;
 type MessageCallback = (data: any) => void;
@@ -389,6 +411,31 @@ export class WebSocketService {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(
                 JSON.stringify({ type: "delete_message", message_id: messageId, room: roomId }),
+            );
+        }
+    }
+
+    addMessageReaction(roomId: number, reaction: MessageReaction) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(
+                JSON.stringify({
+                    type: "add_message_reaction",
+                    reaction,
+                    room: roomId,
+                }),
+            );
+        }
+    }
+
+    deleteMessageReaction(messageId: number, reactionId: number, roomId: number) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(
+                JSON.stringify({
+                    type: "delete_message_reaction",
+                    message_id: messageId,
+                    room: roomId,
+                    reaction_id: reactionId,
+                }),
             );
         }
     }

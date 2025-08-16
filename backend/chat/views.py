@@ -13,10 +13,12 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import ChatRoom, Membership, Message, MessageMedia
+from .models import (ChatRoom, Membership, Message, MessageMedia,
+                     MessageReaction)
 from .permissions import IsOwnerOrReadOnly, UserPermissions
 from .serializers import (ChatRoomSerializer, MessageMediaSerializer,
-                          MessageSerializer, UserSerializer)
+                          MessageReactionSerializer, MessageSerializer,
+                          UserSerializer)
 
 
 def get_csrf(request):
@@ -264,6 +266,45 @@ class MessageViewSet(viewsets.ModelViewSet[Message]):
         if request.user != target_message.user and not request.user.is_superuser:
             return Response(
                 {"detail": f"{request.user.username} can only edit its own messages."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        return super().update(request, *args, **kwargs)
+
+
+class MessageReactionViewSet(viewsets.ModelViewSet[MessageReaction]):
+    serializer_class = MessageReactionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return MessageReaction.objects.filter(message_id=self.kwargs["message_pk"])
+
+    def perform_create(self, serializer):
+        message = get_object_or_404(Message, pk=self.kwargs["message_pk"])
+        serializer.save(user=self.request.user, message=message)
+
+    @override
+    def destroy(self, request: Request, *args, **kwargs) -> Response:
+        target_message_reaction = self.get_object()
+        if request.user != target_message_reaction.user and not request.user.is_superuser:
+            return Response(
+                {
+                    "detail": (
+                        f"{request.user.username} doesn't have enough"
+                        f" privileges to delete {target_message_reaction.user.username}'s message reaction"
+                    )
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        return super().destroy(request, *args, **kwargs)
+
+    @override
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        target_message_reaction = self.get_object()
+        if request.user != target_message_reaction.user and not request.user.is_superuser:
+            return Response(
+                {"detail": f"{request.user.username} can only update its own messages reactions."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 

@@ -5,7 +5,8 @@ from rest_framework import serializers
 
 from chat.utils.image import crop_avatar_img
 
-from .models import ChatRoom, Membership, Message, MessageMedia, Profile
+from .models import (ChatRoom, Membership, Message, MessageMedia,
+                     MessageReaction, Profile)
 
 
 class ProfileSerializer(serializers.ModelSerializer[Profile]):
@@ -81,16 +82,37 @@ class MessageMediaSerializer(serializers.ModelSerializer[MessageMedia]):
         return value
 
 
+class MessageReactionSerializer(serializers.ModelSerializer[MessageReaction]):
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = MessageReaction
+        fields = ("id", "emoji", "user", "message", "created_at")
+        read_only_fields = ("id", "user", "message")
+
+
 class MessageSerializer(serializers.ModelSerializer[Message]):
     user = UserSerializer(read_only=True)
     reply_to = RepliedMessageSerializer(read_only=True)
     reply_to_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     media = MessageMediaSerializer(many=True, read_only=True)
     media_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+    reactions = MessageReactionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Message
-        fields = ["id", "room", "user", "content", "timestamp", "reply_to", "reply_to_id", "media", "media_ids"]
+        fields = [
+            "id",
+            "room",
+            "user",
+            "content",
+            "timestamp",
+            "reply_to",
+            "reply_to_id",
+            "media",
+            "media_ids",
+            "reactions",
+        ]
         read_only_fields = ("user", "reply_to", "media")
 
     def validate(self, data):
@@ -125,6 +147,7 @@ class MessageSerializer(serializers.ModelSerializer[Message]):
     def update(self, instance, validated_data):
         reply_to_id = validated_data.pop("reply_to_id", None)
         media_ids = validated_data.pop("media_ids", [])
+        reaction = validated_data.pop("reaction", None)
 
         if reply_to_id:
             try:
@@ -132,10 +155,16 @@ class MessageSerializer(serializers.ModelSerializer[Message]):
                 validated_data["reply_to"] = reply_to_message
             except Message.DoesNotExist:
                 raise serializers.ValidationError({"reply_to_id": "Referenced message does not exist."})
-        elif reply_to_id is None:
+        else:
             validated_data["reply_to"] = None
 
         message = super().update(instance, validated_data)
+
+        if reaction:
+            MessageReaction.objects.create(
+                message=message,
+                emoji=reaction,
+            )
 
         if media_ids:
             media = MessageMedia.objects.filter(id__in=media_ids, message__isnull=True)

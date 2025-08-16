@@ -1,10 +1,11 @@
-import { memo, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { formatTime } from "../../helpers/format";
 import * as types from "../../api/types";
-import { Box, Stack, Avatar, Typography, useTheme } from "@mui/material";
-import { Reply } from "@mui/icons-material";
+import { Box, Stack, Avatar, Typography, useTheme, Fade, IconButton } from "@mui/material";
+import { AddReaction, Reply } from "@mui/icons-material";
 import { MediaGrid } from "./media_grid";
 import { ImageViewer } from "./image_viewer";
+import { ReactionsDisplay } from "./reactions_display";
 
 // Defines the position of a message within a sequence from the same user.
 export type MessageSequenceType = "single" | "first" | "middle" | "last";
@@ -13,10 +14,18 @@ type MessageProps = {
     message: types.Message;
     currentUser: types.User;
     sequenceType: MessageSequenceType;
+    isHighlighted: boolean;
     onCtxMenu: (event: React.MouseEvent, message: types.Message) => void;
     onProfileView: (user: types.User) => void;
     onReplyClick: (messageId: number) => void;
-    isHighlighted: boolean;
+    onReactionPickerShow: (message: types.Message, element: HTMLElement) => void;
+    isReactionPickerOpen: boolean;
+    onToggleReaction: (
+        messageId: types.Message,
+        emoji: string,
+        isReactionSet?: types.MessageReaction,
+    ) => void;
+    setShowReactionsDialog: (value: boolean) => void;
 };
 
 const avatarSize = 40;
@@ -30,6 +39,10 @@ export const Message = memo(
         onProfileView,
         onReplyClick,
         isHighlighted,
+        onReactionPickerShow,
+        isReactionPickerOpen,
+        onToggleReaction,
+        setShowReactionsDialog,
     }: MessageProps) => {
         const theme = useTheme();
         const isOwnMessage = message.user.id === currentUser.id;
@@ -50,6 +63,23 @@ export const Message = memo(
         const [lightboxOpen, setLightboxOpen] = useState(false);
         const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+        const [showReactionButton, setShowReactionButton] = useState(false);
+        const reactionButtonRef = useRef<HTMLButtonElement>(null);
+        const messageContainerRef = useRef<HTMLDivElement>(null);
+
+        const handleToggleReaction = (emoji: string) => {
+            const userReaction = message.reactions.find(
+                (reaction) => reaction.user.id === currentUser.id,
+            );
+            onToggleReaction(message, emoji, userReaction);
+        };
+
+        const handleShowReactionPicker = () => {
+            if (reactionButtonRef.current) {
+                onReactionPickerShow(message, reactionButtonRef.current);
+            }
+        };
+
         const handleOpenLightbox = (index: number) => {
             setCurrentImageIndex(index);
             setLightboxOpen(true);
@@ -63,10 +93,24 @@ export const Message = memo(
             setCurrentImageIndex(index);
         };
 
-        /**
-         * Calculates the border radius for the message bubble to create a grouped effect.
-         * @returns The CSS border-radius value.
-         */
+        const handleMouseEnter = () => {
+            setShowReactionButton(true);
+        };
+
+        const handleMouseLeave = (event: React.MouseEvent) => {
+            // Check if we're moving to the reaction button or reactions area
+            const relatedTarget = event.relatedTarget as HTMLElement;
+            if (
+                messageContainerRef.current &&
+                relatedTarget &&
+                (messageContainerRef.current.contains(relatedTarget) ||
+                    relatedTarget.closest("[data-reaction-area]"))
+            ) {
+                return; // Don't hide if moving within the message area
+            }
+            setShowReactionButton(false);
+        };
+
         const getBorderRadius = () => {
             const borderRadius = "1rem";
             const sharpRadius = "0.25rem";
@@ -92,12 +136,13 @@ export const Message = memo(
 
         const hasMedia = message.media && message.media.length > 0;
         const hasContent = message.content && message.content.trim().length > 0;
+        const hasReactions = message.reactions && message.reactions.length > 0;
 
         return (
             <Stack
                 direction="row"
                 justifyContent={isOwnMessage ? "flex-end" : "flex-start"}
-                alignItems={showAvatar ? "flex-end" : "flex-start"}
+                alignItems="flex-start"
                 sx={{
                     transition: "background-color 0.3s ease",
                     backgroundColor: isHighlighted ? "action.hover" : "transparent",
@@ -110,7 +155,7 @@ export const Message = memo(
                 <Stack
                     direction={isOwnMessage ? "row-reverse" : "row"}
                     spacing={1}
-                    alignItems="end"
+                    alignItems="flex-start"
                     sx={{
                         maxWidth: { xs: "85%", sm: "75%", md: "65%" },
                         minWidth: 0,
@@ -121,7 +166,11 @@ export const Message = memo(
                             onClick={() => {
                                 onProfileView(message.user);
                             }}
-                            sx={{ cursor: "pointer" }}
+                            sx={{
+                                cursor: "pointer",
+                                alignSelf: "flex-end",
+                                mb: hasReactions ? 4 : 0, // Add margin when reactions are present
+                            }}
                         >
                             {message.user.profile.avatar_img ? (
                                 <Avatar
@@ -160,10 +209,15 @@ export const Message = memo(
                     )}
 
                     <Box
+                        ref={messageContainerRef}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
                         sx={{
                             minWidth: 0,
                             width: "100%",
+                            position: "relative",
                         }}
+                        data-reaction-area
                     >
                         <div onContextMenu={(e) => onCtxMenu(e, message)}>
                             {/* Replied message section */}
@@ -390,6 +444,69 @@ export const Message = memo(
                                 </Box>
                             </Box>
                         </div>
+
+                        {/* Reactions at the bottom */}
+                        {hasReactions && (
+                            <Box
+                                sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: isOwnMessage ? "flex-end" : "flex-start",
+                                    mt: 0.5,
+                                    ml: needsPadding ? `${avatarSize + 8}px` : 0,
+                                    position: "relative",
+                                    zIndex: 1,
+                                }}
+                                data-reaction-area
+                            >
+                                <ReactionsDisplay
+                                    reactions={message.reactions}
+                                    currentUser={currentUser}
+                                    onToggleReaction={handleToggleReaction}
+                                    setShowReactionsDialog={setShowReactionsDialog}
+                                />
+                            </Box>
+                        )}
+
+                        {/* Reaction Picker Button */}
+                        <Fade in={showReactionButton || isReactionPickerOpen} timeout={300}>
+                            <IconButton
+                                ref={reactionButtonRef}
+                                onClick={handleShowReactionPicker}
+                                size="small"
+                                sx={{
+                                    position: "absolute",
+                                    top: hasReactions ? 6 : "50%",
+                                    transform: hasReactions ? "translateY(0)" : "translateY(-50%)",
+                                    [isOwnMessage ? "left" : "right"]: -40,
+                                    bgcolor: "background.paper",
+                                    border: `1px solid ${theme.palette.divider}`,
+                                    color: "text.secondary",
+                                    width: 28,
+                                    height: 28,
+                                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                                    zIndex: 2,
+                                    "&:hover": {
+                                        bgcolor: "action.hover",
+                                        color: "primary.main",
+                                        transform: hasReactions
+                                            ? "translateY(-2px) scale(1.1)"
+                                            : "translateY(-50%) scale(1.1)",
+                                        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.25)",
+                                        borderColor: "primary.main",
+                                    },
+                                    "&:active": {
+                                        transform: hasReactions
+                                            ? "translateY(0) scale(1.05)"
+                                            : "translateY(-50%) scale(1.05)",
+                                    },
+                                }}
+                                data-reaction-area
+                            >
+                                <AddReaction fontSize="small" />
+                            </IconButton>
+                        </Fade>
                     </Box>
                 </Stack>
 

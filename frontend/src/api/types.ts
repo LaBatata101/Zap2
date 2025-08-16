@@ -24,7 +24,16 @@ export type Message = {
     timestamp: string;
     reply_to?: Message;
     media?: Media[];
+    reactions: MessageReaction[];
 };
+
+export interface MessageReaction {
+    id: number;
+    emoji: string;
+    user: User;
+    message: number;
+    created_at: string;
+}
 
 export type MessagePayload = {
     room: number;
@@ -87,4 +96,6 @@ export type WebSocketEvent =
           message_id: number;
           room: number;
           last_message?: { username: string; content: string; timestamp: string; room: number };
-      };
+      }
+    | { type: "add_message_reaction"; reaction: MessageReaction }
+    | { type: "delete_message_reaction"; message: Message; reaction_id: number };

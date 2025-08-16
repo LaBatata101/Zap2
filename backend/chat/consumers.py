@@ -66,6 +66,20 @@ class UserChatConsumer(AsyncWebsocketConsumer):
                 await self.channel_layer.group_send(
                     f"chat_{data["message"]["room"]}", {"type": "chat.edit.message", "updated_message": text_data}
                 )
+            case "add_message_reaction":
+                await self.channel_layer.group_send(
+                    f"chat_{data["room"]}", {"type": "chat.add.message.reaction", "reaction": text_data}
+                )
+            case "delete_message_reaction":
+                await self.channel_layer.group_send(
+                    f"chat_{data["room"]}",
+                    {
+                        "type": "chat.delete.message.reaction",
+                        "message_id": data["message_id"],
+                        "room": data["room"],
+                        "reaction_id": data["reaction_id"],
+                    },
+                )
             case t:
                 raise Exception(f"Message type not handled: {t}")
 
@@ -95,6 +109,25 @@ class UserChatConsumer(AsyncWebsocketConsumer):
 
         await self.send(text_data=json.dumps(response_data))
 
+    async def chat_add_message_reaction(self, event):
+        await self.send(text_data=event["reaction"])
+
+    async def chat_delete_message_reaction(self, event):
+        message = await self.get_message(event["message_id"], event["room"])
+        await self.send(
+            text_data=json.dumps(
+                {"type": "delete_message_reaction", "message": message, "reaction_id": event["reaction_id"]}
+            )
+        )
+
+    @database_sync_to_async
+    def get_message(self, message_id, room_id):
+        try:
+            message = Message.objects.get(id=message_id)
+            return MessageSerializer(message).data
+        except Message.DoesNotExist:
+            raise Exception(f"Message with {message_id=} not found in {room_id}")
+
     @database_sync_to_async
     def is_last_message_in_room(self, message_id, room):
         try:
@@ -111,7 +144,7 @@ class UserChatConsumer(AsyncWebsocketConsumer):
             prev_message = Message.objects.filter(room=room, timestamp__lt=msg.timestamp).order_by("-timestamp").first()
             return MessageSerializer(prev_message).data if prev_message else None
         except Message.DoesNotExist:
-            raise Exception(f"Message with {message_id=} not found in {room=}")
+            raise Exception(f"Message with {message_id=} not found in {room}")
 
     @database_sync_to_async
     def get_user_chat_rooms(self, user):

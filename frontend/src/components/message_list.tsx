@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as types from "../api/types";
 import {
+    Avatar,
     Box,
     Button,
     Chip,
@@ -9,23 +10,47 @@ import {
     DialogActions,
     DialogContent,
     DialogContentText,
+    DialogTitle,
     Fab,
+    IconButton,
+    List,
+    ListItem,
+    ListItemAvatar,
     ListItemIcon,
     ListItemText,
     Menu,
     MenuItem,
+    Popover,
+    PopoverActions,
+    Typography,
+    useTheme,
     Zoom,
 } from "@mui/material";
 import { formatDate } from "../helpers/format";
 import { Message, MessageSequenceType } from "./message";
-import { ContentCopy, Delete, Edit, KeyboardArrowDown, Reply } from "@mui/icons-material";
+import {
+    Close,
+    ContentCopy,
+    Delete,
+    Edit,
+    EmojiEmotions,
+    KeyboardArrowDown,
+    Reply,
+} from "@mui/icons-material";
 import { UserProfileDialog } from "./dialog/user_profile_dialog";
 import { DialogMode } from "./dialog/common";
+import EmojiPicker, { EmojiClickData, EmojiStyle, Theme } from "emoji-picker-react";
+import { GroupedReaction } from "./message/reactions_display";
 
 type ContextMenuState = {
     mouseX: number;
     mouseY: number;
     message: types.Message;
+} | null;
+
+type ReactionPickerState = {
+    message: types.Message;
+    anchorEl: HTMLElement;
 } | null;
 
 interface MessageListProps {
@@ -44,6 +69,11 @@ interface MessageListProps {
     isDM: boolean;
     isChatGroupOwner: boolean;
     onStartDirectMessage: (user: types.User) => void;
+    onToggleReaction: (
+        message: types.Message,
+        emoji: string,
+        reaction?: types.MessageReaction,
+    ) => void;
 }
 
 interface ScrollState {
@@ -70,6 +100,7 @@ export const MessageList = memo(
         isChatGroupOwner,
         onStartDirectMessage,
         onDeleteMessage,
+        onToggleReaction,
     }: MessageListProps) => {
         const messagesEndRef = useRef<HTMLDivElement>(null);
         const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -79,13 +110,39 @@ export const MessageList = memo(
         const [profileDialogData, setProfileDialogData] = useState<types.User | null>(null);
         const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
         const [messageToDelete, setMessageToDelete] = useState<types.Message | null>(null);
+        const [reactionPickerState, setReactionPickerState] = useState<ReactionPickerState>(null);
+        const [showReactionsDialog, setShowReactionsDialog] = useState(false);
+        const [reactionsToDisplay, setReactionsToDisplay] = useState<
+            types.MessageReaction[] | null
+        >(null);
         const firstUnreadRef = useRef<HTMLDivElement>(null);
         const prevMessagesLength = useRef(0);
 
         const scrollStateRef = useRef<ScrollState | null>(null);
         const isRestoring = useRef(false);
         const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+        const initialResizeObserverRef = useRef<ResizeObserver | null>(null);
+
+        const popoverActionRef = useRef<PopoverActions>(null);
         const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+        const emojiPickerContainerRef = useCallback((node: HTMLDivElement | null) => {
+            // Disconnect the old observer if it exists
+            if (resizeObserverRef.current) {
+                resizeObserverRef.current.disconnect();
+                resizeObserverRef.current = null;
+            }
+
+            // If the node is mounted, create and attach a new observer
+            if (node !== null) {
+                const observer = new ResizeObserver(() => {
+                    // When the picker resizes, update the popover's position.
+                    popoverActionRef.current?.updatePosition();
+                });
+                observer.observe(node);
+                resizeObserverRef.current = observer;
+            }
+        }, []);
 
         // Debounced fetch to prevent multiple simultaneous requests
         const debouncedFetch = useCallback(() => {
@@ -154,18 +211,18 @@ export const MessageList = memo(
             if (!container) return;
 
             // Create resize observer to handle dynamic content changes
-            resizeObserverRef.current = new ResizeObserver((_) => {
+            initialResizeObserverRef.current = new ResizeObserver((_) => {
                 if (isRestoring.current && scrollStateRef.current?.isActive) {
                     // Re-run restoration if content is still changing
                     restoreScrollPosition();
                 }
             });
 
-            resizeObserverRef.current.observe(container);
+            initialResizeObserverRef.current.observe(container);
 
             return () => {
-                if (resizeObserverRef.current) {
-                    resizeObserverRef.current.disconnect();
+                if (initialResizeObserverRef.current) {
+                    initialResizeObserverRef.current.disconnect();
                 }
             };
         }, [restoreScrollPosition]);
@@ -224,8 +281,8 @@ export const MessageList = memo(
                 if (fetchTimeoutRef.current) {
                     clearTimeout(fetchTimeoutRef.current);
                 }
-                if (resizeObserverRef.current) {
-                    resizeObserverRef.current.disconnect();
+                if (initialResizeObserverRef.current) {
+                    initialResizeObserverRef.current.disconnect();
                 }
             };
         }, []);
@@ -243,26 +300,53 @@ export const MessageList = memo(
             );
         }, []);
 
+        const handleReactionPickerShow = useCallback(
+            (message: types.Message, element: HTMLElement) => {
+                setReactionPickerState({
+                    message,
+                    anchorEl: element,
+                });
+            },
+            [],
+        );
+
+        const handleReactionPickerClose = useCallback(() => {
+            setReactionPickerState(null);
+        }, []);
+
+        const handleEmojiClick = useCallback(
+            (emojiData: EmojiClickData) => {
+                if (reactionPickerState) {
+                    const userReaction = reactionPickerState.message.reactions.find(
+                        (reaction) => reaction.user.id === currentUser.id,
+                    );
+                    onToggleReaction(reactionPickerState.message, emojiData.emoji, userReaction);
+                    handleReactionPickerClose();
+                }
+            },
+            [reactionPickerState],
+        );
+
         const handleUserProfileDialog = useCallback((user: types.User) => {
             setProfileDialogOpen(true);
             setProfileDialogData(user);
         }, []);
 
-        const handleClose = () => {
+        const handleCloseMenu = () => {
             setContextMenu(null);
         };
 
         const handleReply = () => {
             if (contextMenu) {
                 onReply(contextMenu.message);
-                handleClose();
+                handleCloseMenu();
             }
         };
 
         const handleMessageEdit = () => {
             if (contextMenu) {
                 onMessageEdit(contextMenu.message);
-                handleClose();
+                handleCloseMenu();
             }
         };
 
@@ -274,7 +358,7 @@ export const MessageList = memo(
                 };
                 const clipboardItem = new ClipboardItem(clipboardItemData);
                 await navigator.clipboard.write([clipboardItem]);
-                handleClose();
+                handleCloseMenu();
             }
         };
 
@@ -282,7 +366,15 @@ export const MessageList = memo(
             if (contextMenu) {
                 setMessageToDelete(contextMenu.message);
                 setDeleteConfirmOpen(true);
-                handleClose();
+                handleCloseMenu();
+            }
+        };
+
+        const handleShowReactionsDialog = () => {
+            if (contextMenu) {
+                setShowReactionsDialog(true);
+                setReactionsToDisplay(contextMenu.message.reactions);
+                handleCloseMenu();
             }
         };
 
@@ -356,13 +448,7 @@ export const MessageList = memo(
                     return (
                         <div key={message.id} id={`message-${message.id}`}>
                             {showDate && (
-                                <Box
-                                    sx={{
-                                        display: "flex",
-                                        justifyContent: "center",
-                                        my: 2,
-                                    }}
-                                >
+                                <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
                                     <Chip
                                         label={formatDate(message.timestamp)}
                                         sx={{
@@ -371,9 +457,7 @@ export const MessageList = memo(
                                             fontWeight: 500,
                                             fontSize: "0.75rem",
                                             height: 28,
-                                            "& .MuiChip-label": {
-                                                px: 1.5,
-                                            },
+                                            "& .MuiChip-label": { px: 1.5 },
                                         }}
                                     />
                                 </Box>
@@ -381,11 +465,7 @@ export const MessageList = memo(
                             {isFirstUnread && (
                                 <Box
                                     ref={isFirstUnread ? firstUnreadRef : null}
-                                    sx={{
-                                        display: "flex",
-                                        justifyContent: "center",
-                                        my: 2,
-                                    }}
+                                    sx={{ display: "flex", justifyContent: "center", my: 2 }}
                                 >
                                     <Chip
                                         label={`Unread messages: ${unreadCount}`}
@@ -396,9 +476,7 @@ export const MessageList = memo(
                                             fontSize: "0.75rem",
                                             height: 28,
                                             boxShadow: "0 2px 8px rgba(59, 130, 246, 0.3)",
-                                            "& .MuiChip-label": {
-                                                px: 1.5,
-                                            },
+                                            "& .MuiChip-label": { px: 1.5 },
                                         }}
                                     />
                                 </Box>
@@ -407,10 +485,17 @@ export const MessageList = memo(
                                 message={message}
                                 currentUser={currentUser}
                                 sequenceType={sequenceType}
+                                isHighlighted={highlightedMessageId === message.id}
                                 onCtxMenu={handleContextMenu}
                                 onProfileView={handleUserProfileDialog}
                                 onReplyClick={onReplyClick}
-                                isHighlighted={highlightedMessageId === message.id}
+                                onReactionPickerShow={handleReactionPickerShow}
+                                isReactionPickerOpen={
+                                    reactionPickerState !== null &&
+                                    reactionPickerState.message.id === message.id
+                                }
+                                onToggleReaction={onToggleReaction}
+                                setShowReactionsDialog={setShowReactionsDialog}
                             />
                         </div>
                     );
@@ -436,9 +521,11 @@ export const MessageList = memo(
                         <KeyboardArrowDown />
                     </Fab>
                 </Zoom>
+
+                {/* Context Menu */}
                 <Menu
                     open={contextMenu !== null}
-                    onClose={handleClose}
+                    onClose={handleCloseMenu}
                     anchorReference="anchorPosition"
                     anchorPosition={
                         contextMenu !== null
@@ -457,14 +544,7 @@ export const MessageList = memo(
                         },
                     }}
                 >
-                    <MenuItem
-                        onClick={handleReply}
-                        sx={{
-                            "&:hover": {
-                                bgcolor: "action.hover",
-                            },
-                        }}
-                    >
+                    <MenuItem onClick={handleReply} sx={{ "&:hover": { bgcolor: "action.hover" } }}>
                         <ListItemIcon sx={{ color: "text.secondary" }}>
                             <Reply fontSize="small" />
                         </ListItemIcon>
@@ -472,11 +552,7 @@ export const MessageList = memo(
                     </MenuItem>
                     <MenuItem
                         onClick={handleCopyText}
-                        sx={{
-                            "&:hover": {
-                                bgcolor: "action.hover",
-                            },
-                        }}
+                        sx={{ "&:hover": { bgcolor: "action.hover" } }}
                     >
                         <ListItemIcon sx={{ color: "text.secondary" }}>
                             <ContentCopy fontSize="small" />
@@ -487,11 +563,7 @@ export const MessageList = memo(
                         currentUser.id === contextMenu?.message.user.id) && (
                         <MenuItem
                             onClick={handleMessageEdit}
-                            sx={{
-                                "&:hover": {
-                                    bgcolor: "action.hover",
-                                },
-                            }}
+                            sx={{ "&:hover": { bgcolor: "action.hover" } }}
                         >
                             <ListItemIcon sx={{ color: "text.secondary" }}>
                                 <Edit fontSize="small" />
@@ -499,14 +571,21 @@ export const MessageList = memo(
                             <ListItemText sx={{ color: "text.primary" }}>Edit</ListItemText>
                         </MenuItem>
                     )}
+                    {contextMenu && contextMenu.message.reactions.length > 0 && (
+                        <MenuItem
+                            onClick={handleShowReactionsDialog}
+                            sx={{ "&:hover": { bgcolor: "action.hover" } }}
+                        >
+                            <ListItemIcon sx={{ color: "text.secondary" }}>
+                                <EmojiEmotions fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText sx={{ color: "text.primary" }}>Reactions</ListItemText>
+                        </MenuItem>
+                    )}
                     {canDeleteMessage() && (
                         <MenuItem
                             onClick={handleMessageDelete}
-                            sx={{
-                                "&:hover": {
-                                    bgcolor: "action.hover",
-                                },
-                            }}
+                            sx={{ "&:hover": { bgcolor: "action.hover" } }}
                         >
                             <ListItemIcon sx={{ color: "error.main" }}>
                                 <Delete fontSize="small" />
@@ -515,6 +594,35 @@ export const MessageList = memo(
                         </MenuItem>
                     )}
                 </Menu>
+
+                <Popover
+                    action={popoverActionRef}
+                    open={reactionPickerState !== null}
+                    anchorEl={reactionPickerState?.anchorEl}
+                    onClose={handleReactionPickerClose}
+                    anchorOrigin={{ vertical: "top", horizontal: "center" }}
+                    transformOrigin={{ vertical: "bottom", horizontal: "center" }}
+                    sx={{
+                        "& .MuiPopover-paper": {
+                            bgcolor: "transparent",
+                            boxShadow: "none",
+                            overflow: "visible",
+                        },
+                    }}
+                    keepMounted
+                >
+                    <div ref={emojiPickerContainerRef}>
+                        <EmojiPicker
+                            lazyLoadEmojis={true}
+                            reactionsDefaultOpen={true}
+                            emojiStyle={EmojiStyle.NATIVE}
+                            onEmojiClick={handleEmojiClick}
+                            theme={Theme.DARK}
+                            width={350}
+                            height={400}
+                        />
+                    </div>
+                </Popover>
 
                 {/* Delete Confirmation Dialog */}
                 <Dialog
@@ -547,10 +655,7 @@ export const MessageList = memo(
                             sx={{
                                 borderColor: "divider",
                                 color: "text.primary",
-                                "&:hover": {
-                                    borderColor: "primary.main",
-                                    bgcolor: "action.hover",
-                                },
+                                "&:hover": { borderColor: "primary.main", bgcolor: "action.hover" },
                             }}
                         >
                             Cancel
@@ -559,12 +664,7 @@ export const MessageList = memo(
                             onClick={handleDeleteConfirm}
                             variant="contained"
                             color="error"
-                            sx={{
-                                bgcolor: "error.main",
-                                "&:hover": {
-                                    bgcolor: "error.dark",
-                                },
-                            }}
+                            sx={{ bgcolor: "error.main", "&:hover": { bgcolor: "error.dark" } }}
                         >
                             Delete
                         </Button>
@@ -586,7 +686,160 @@ export const MessageList = memo(
                         }}
                     />
                 )}
+
+                {/* Reactions Dialog */}
+                {reactionsToDisplay && showReactionsDialog && (
+                    <ReactionsDialog
+                        open={showReactionsDialog}
+                        handleClose={() => setShowReactionsDialog(false)}
+                        currentUser={currentUser}
+                        reactions={reactionsToDisplay}
+                    />
+                )}
             </Box>
+        );
+    },
+);
+
+const ReactionsDialog = memo(
+    ({
+        open,
+        reactions,
+        currentUser,
+        handleClose,
+    }: {
+        open: boolean;
+        reactions: types.MessageReaction[];
+        currentUser: types.User;
+        handleClose: () => void;
+    }) => {
+        const theme = useTheme();
+        const groupedReactions = reactions.reduce(
+            (acc, reaction) => {
+                if (!acc[reaction.emoji]) {
+                    acc[reaction.emoji] = {
+                        emoji: reaction.emoji,
+                        count: 0,
+                        users: [],
+                        userReacted: false,
+                    };
+                }
+                acc[reaction.emoji].count++;
+                acc[reaction.emoji].users.push(reaction.user);
+                if (reaction.user.id === currentUser.id) {
+                    acc[reaction.emoji].userReacted = true;
+                }
+                return acc;
+            },
+            {} as Record<string, GroupedReaction>,
+        );
+        const reactionsList = Object.values(groupedReactions);
+
+        return (
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="sm"
+                fullWidth
+                sx={{
+                    "& .MuiDialog-paper": {
+                        bgcolor: "background.paper",
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 2,
+                        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+                        maxHeight: "70vh",
+                    },
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        pb: 1,
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                    }}
+                >
+                    <Box>
+                        <Typography variant="h6" fontWeight="600">
+                            All Reactions ({reactionsList.length})
+                        </Typography>
+                    </Box>
+                    <IconButton
+                        onClick={() => handleClose()}
+                        size="small"
+                        sx={{ color: "text.secondary" }}
+                    >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 0 }}>
+                    <List sx={{ py: 0 }}>
+                        {reactionsList.map((reaction) => (
+                            <Box key={reaction.emoji} sx={{ mb: 2 }}>
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        px: 2,
+                                        py: 1,
+                                        bgcolor: "surface.main",
+                                        borderRadius: 1,
+                                        mx: 1,
+                                        mt: 1,
+                                    }}
+                                >
+                                    <Typography variant="h6" sx={{ mr: 1, fontSize: "1.2rem" }}>
+                                        {reaction.emoji}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {reaction.count}{" "}
+                                        {reaction.count === 1 ? "person" : "people"}
+                                    </Typography>
+                                </Box>
+                                {reaction.users.map((user) => (
+                                    <ListItem key={user.id} sx={{ py: 0.5 }}>
+                                        <ListItemAvatar>
+                                            {user.profile?.avatar_img ? (
+                                                <Avatar
+                                                    src={user.profile.avatar_img}
+                                                    sx={{ width: 32, height: 32 }}
+                                                />
+                                            ) : (
+                                                <Avatar
+                                                    sx={{
+                                                        width: 32,
+                                                        height: 32,
+                                                        fontSize: "0.875rem",
+                                                        background:
+                                                            "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                                    }}
+                                                >
+                                                    {user.username.charAt(0).toUpperCase()}
+                                                </Avatar>
+                                            )}
+                                        </ListItemAvatar>
+                                        <ListItemText
+                                            primary={user.username}
+                                            sx={{
+                                                "& .MuiListItemText-primary": {
+                                                    fontSize: "0.875rem",
+                                                    fontWeight:
+                                                        user.id === currentUser.id ? 600 : 400,
+                                                    color:
+                                                        user.id === currentUser.id
+                                                            ? "primary.main"
+                                                            : "text.primary",
+                                                },
+                                            }}
+                                        />
+                                    </ListItem>
+                                ))}
+                            </Box>
+                        ))}
+                    </List>
+                </DialogContent>
+            </Dialog>
         );
     },
 );

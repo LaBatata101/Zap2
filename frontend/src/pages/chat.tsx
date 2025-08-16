@@ -9,6 +9,7 @@ import {
     LoginCredentials,
     Message,
     MessagePayload,
+    MessageReaction,
     RegistrationCredentials,
     User,
     WebSocketEvent,
@@ -36,6 +37,8 @@ enum ChatActionType {
     SendMessage,
     DeleteMessage,
     EditMessage,
+    AddMessageReaction,
+    DeleteMessageReaction,
     Error,
 }
 
@@ -93,7 +96,15 @@ type ChatAction =
           };
       }
     | { type: ChatActionType.SendMessage; payload: Message }
-    | { type: ChatActionType.EditMessage; payload: Message };
+    | { type: ChatActionType.EditMessage; payload: Message }
+    | {
+          type: ChatActionType.AddMessageReaction;
+          payload: MessageReaction;
+      }
+    | {
+          type: ChatActionType.DeleteMessageReaction;
+          payload: { message: Message; reactionId: number };
+      };
 
 const initialState: ChatState = {
     user: undefined,
@@ -272,6 +283,58 @@ function chatReducer(state: ChatState, action: ChatAction) {
                     (message) => message.id !== action.payload.messageId,
                 ),
             };
+        case ChatActionType.AddMessageReaction:
+            const reactionPayload = action.payload;
+            const messageId = reactionPayload.message;
+
+            var updatedMessages = state.messages.map((message) => {
+                if (message.id === messageId) {
+                    const updatedReactions = [...message.reactions];
+                    const existingReactionIndex = updatedReactions.findIndex(
+                        (reaction) =>
+                            reaction.user.id === reactionPayload.user.id &&
+                            reaction.emoji === reactionPayload.emoji,
+                    );
+
+                    if (existingReactionIndex > -1) {
+                        updatedReactions.splice(existingReactionIndex, 1);
+                    } else {
+                        updatedReactions.push(reactionPayload);
+                    }
+
+                    return {
+                        ...message,
+                        reactions: updatedReactions,
+                    };
+                }
+                return message;
+            });
+
+            return {
+                ...state,
+                messages: updatedMessages,
+            };
+        case ChatActionType.DeleteMessageReaction:
+            var updatedMessages = state.messages.map((message) => {
+                if (message.id === action.payload.message.id) {
+                    const updatedReactions = [...message.reactions];
+                    const existingReactionIndex = updatedReactions.findIndex(
+                        (reaction) => reaction.id === action.payload.reactionId,
+                    );
+                    updatedReactions.splice(existingReactionIndex, 1);
+
+                    return {
+                        ...message,
+                        reactions: updatedReactions,
+                    };
+                }
+                return message;
+            });
+
+            return {
+                ...state,
+                messages: updatedMessages,
+            };
         default:
             //@ts-ignore
             throw new Error(`Unhandled action type: ${action.type}`);
@@ -322,7 +385,7 @@ export const ChatApp = () => {
     useEffect(() => {
         const service = wsService.current;
 
-        const handleMessage = (event: WebSocketEvent) => {
+        const handleMessageEvents = (event: WebSocketEvent) => {
             switch (event.type) {
                 case "send_message":
                     dispatch({ type: ChatActionType.SendMessage, payload: event.message });
@@ -338,6 +401,18 @@ export const ChatApp = () => {
                             roomId: event.room,
                             lastMessage: event.last_message,
                         },
+                    });
+                    break;
+                case "add_message_reaction":
+                    dispatch({
+                        type: ChatActionType.AddMessageReaction,
+                        payload: event.reaction,
+                    });
+                    break;
+                case "delete_message_reaction":
+                    dispatch({
+                        type: ChatActionType.DeleteMessageReaction,
+                        payload: { message: event.message, reactionId: event.reaction_id },
                     });
                     break;
                 default:
@@ -360,7 +435,7 @@ export const ChatApp = () => {
         const handleError = () =>
             dispatch({ type: ChatActionType.SetConnectionStatus, payload: ConnectionStatus.Error });
 
-        service.on("message", handleMessage);
+        service.on("message", handleMessageEvents);
         service.on("connect", handleConnect);
         service.on("disconnect", handleDisconnect);
         service.on("error", handleError);
@@ -565,6 +640,35 @@ export const ChatApp = () => {
         }
     };
 
+    const handleToggleMessageReaction = async (
+        message: Message,
+        emoji: string,
+        reaction?: MessageReaction,
+    ) => {
+        try {
+            if (reaction) {
+                if (reaction.emoji !== emoji) {
+                    const result = await apiService.current.updateMessageReaction(
+                        message.id,
+                        reaction.id,
+                        emoji,
+                    );
+                    // TODO: create websocket event for reaction update
+                    wsService.current.deleteMessageReaction(message.id, reaction.id, message.room);
+                    wsService.current.addMessageReaction(message.room, result.data);
+                } else {
+                    await apiService.current.deleteMessageReaction(message.id, reaction.id);
+                    wsService.current.deleteMessageReaction(message.id, reaction.id, message.room);
+                }
+            } else {
+                const response = await apiService.current.addMessageReaction(message.id, emoji);
+                wsService.current.addMessageReaction(message.room, response.data);
+            }
+        } catch (error) {
+            console.error("Failed to toggle message reaction: ", error);
+        }
+    };
+
     const handleEditMessage = async (newContent: string) => {
         try {
             const response = await apiService.current.editMessage(messageEdit!.id, newContent);
@@ -699,6 +803,7 @@ export const ChatApp = () => {
                         onStartDirectMessage={handleStartDirectMessage}
                         onDeleteMessage={handleDeleteMessage}
                         onToggleAdmin={handleToggleAdmin}
+                        onToggleReaction={handleToggleMessageReaction}
                     />
                 </Box>
             </Box>

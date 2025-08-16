@@ -49,6 +49,11 @@ type ChatAreaProps = {
     onStartDirectMessage: (user: types.User) => void;
     onDeleteMessage: (message: types.Message) => void;
     onToggleAdmin: (roomId: number, username: string, value: boolean) => Promise<types.User>;
+    onToggleReaction: (
+        message: types.Message,
+        emoji: string,
+        reaction?: types.MessageReaction,
+    ) => void;
 };
 
 export const ChatArea = ({
@@ -75,6 +80,7 @@ export const ChatArea = ({
     onStartDirectMessage,
     onDeleteMessage,
     onToggleAdmin,
+    onToggleReaction,
 }: ChatAreaProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -241,6 +247,7 @@ export const ChatArea = ({
                 isChatGroupOwner={isChatGroupOwner}
                 onStartDirectMessage={onStartDirectMessage}
                 onDeleteMessage={onDeleteMessage}
+                onToggleReaction={onToggleReaction}
             />
             <MessageInput
                 isConnected={isConnected}

@@ -61,6 +61,18 @@ class Message(models.Model):
 
 
 @final
+class MessageReaction(models.Model):
+    emoji = models.CharField(max_length=2)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.ForeignKey(Message, related_name="reactions", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "message")
+        ordering = ("created_at",)
+
+
+@final
 class MessageMedia(models.Model):
     message = models.ForeignKey(Message, related_name="media", on_delete=models.CASCADE, null=True, blank=True)
     file = models.ImageField(upload_to="chat_media/")
