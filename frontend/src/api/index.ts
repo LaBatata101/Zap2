@@ -440,6 +440,18 @@ export class WebSocketService {
         }
     }
 
+    startTyping(roomId: number) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({ type: "start_typing", room: roomId }));
+        }
+    }
+
+    stopTyping(roomId: number) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({ type: "stop_typing", room: roomId }));
+        }
+    }
+
     on(event: EventTypeStrings, callback: EventCallback) {
         const key = EventType[event];
         if (!this.listeners.has(key)) {

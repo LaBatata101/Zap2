@@ -98,4 +98,10 @@ export type WebSocketEvent =
           last_message?: { username: string; content: string; timestamp: string; room: number };
       }
     | { type: "add_message_reaction"; reaction: MessageReaction }
-    | { type: "delete_message_reaction"; message: Message; reaction_id: number };
+    | { type: "delete_message_reaction"; message: Message; reaction_id: number }
+    | {
+          type: "typing_status";
+          user: string;
+          room: number;
+          is_typing: boolean;
+      };

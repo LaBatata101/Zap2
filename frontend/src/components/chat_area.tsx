@@ -54,6 +54,9 @@ type ChatAreaProps = {
         emoji: string,
         reaction?: types.MessageReaction,
     ) => void;
+    onStartTyping: (roomId: number) => void;
+    onStopTyping: (roomId: number) => void;
+    typingUsers: string[];
 };
 
 export const ChatArea = ({
@@ -81,6 +84,9 @@ export const ChatArea = ({
     onDeleteMessage,
     onToggleAdmin,
     onToggleReaction,
+    onStartTyping,
+    onStopTyping,
+    typingUsers,
 }: ChatAreaProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -138,6 +144,24 @@ export const ChatArea = ({
         );
     }
 
+    const getTypingText = () => {
+        const otherTypingUsers = typingUsers;
+
+        if (otherTypingUsers.length === 0) {
+            return "";
+        }
+        if (otherTypingUsers.length === 1) {
+            return `${otherTypingUsers[0]} is typing...`;
+        }
+        if (otherTypingUsers.length === 2) {
+            return `${otherTypingUsers[0]} and ${otherTypingUsers[1]} are typing...`;
+        }
+        if (otherTypingUsers.length === 3) {
+            return `${otherTypingUsers[0]}, ${otherTypingUsers[1]} and ${otherTypingUsers[2]} are typing...`;
+        }
+        return `${otherTypingUsers[0]}, ${otherTypingUsers[1]}, ${otherTypingUsers[2]} and ${otherTypingUsers.length} are typing...`;
+    };
+
     const isDM = currentRoom.is_dm;
     const isDmItself = isDM && recipient?.id === user.id;
 
@@ -145,6 +169,13 @@ export const ChatArea = ({
     const displayName = isDM ? recipient?.username : currentRoom.name;
     const displayAvatar = isDM ? recipient?.profile.avatar_img : currentRoom.avatar_img;
     const avatarFallback = (isDM ? recipient?.username : currentRoom.name)?.charAt(0).toUpperCase();
+
+    const handleStartTyping = () => {
+        onStartTyping(currentRoom.id);
+    };
+    const handleStopTyping = () => {
+        onStopTyping(currentRoom.id);
+    };
 
     return (
         <Stack sx={{ height: "100%", width: "100%" }}>
@@ -220,13 +251,97 @@ export const ChatArea = ({
                                 {avatarFallback}
                             </Avatar>
                         )}
-                        <Typography
-                            variant="h6"
-                            color="text.primary"
-                            sx={{ flexGrow: 1, fontWeight: 600 }}
-                        >
-                            {isDmItself ? "Saved messages" : displayName}
-                        </Typography>
+                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Typography
+                                variant="h6"
+                                color="text.primary"
+                                sx={{
+                                    fontWeight: 600,
+                                    lineHeight: 1.2,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                {isDmItself ? "Saved messages" : displayName}
+                            </Typography>
+                            <Box
+                                sx={{
+                                    height: typingUsers.length > 0 ? "18px" : "0px",
+                                    overflow: "hidden",
+                                    transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                                    opacity: typingUsers.length > 0 ? 1 : 0,
+                                    transform:
+                                        typingUsers.length > 0
+                                            ? "translateY(0)"
+                                            : "translateY(-8px)",
+                                    marginTop: typingUsers.length > 0 ? "2px" : "0px",
+                                }}
+                            >
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: "text.secondary",
+                                        fontSize: "0.75rem",
+                                        fontStyle: "italic",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                        lineHeight: 1.2,
+                                        transform:
+                                            typingUsers.length > 0 ? "scale(1)" : "scale(0.95)",
+                                        transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                    }}
+                                >
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            width: 4,
+                                            height: 4,
+                                            borderRadius: "50%",
+                                            bgcolor: "success.main",
+                                            display: "inline-block",
+                                            animation:
+                                                typingUsers.length > 0
+                                                    ? "pulse 1.5s infinite"
+                                                    : "none",
+                                            opacity: typingUsers.length > 0 ? 1 : 0,
+                                            transform:
+                                                typingUsers.length > 0 ? "scale(1)" : "scale(0)",
+                                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                            "@keyframes pulse": {
+                                                "0%": {
+                                                    opacity: 1,
+                                                    transform: "scale(1)",
+                                                },
+                                                "50%": {
+                                                    opacity: 0.6,
+                                                    transform: "scale(1.1)",
+                                                },
+                                                "100%": {
+                                                    opacity: 1,
+                                                    transform: "scale(1)",
+                                                },
+                                            },
+                                        }}
+                                    />
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            opacity: typingUsers.length > 0 ? 1 : 0,
+                                            transform:
+                                                typingUsers.length > 0
+                                                    ? "translateX(0)"
+                                                    : "translateX(-4px)",
+                                            transition:
+                                                "all 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s",
+                                        }}
+                                    >
+                                        {getTypingText()}
+                                    </Box>
+                                </Typography>
+                            </Box>
+                        </Box>
                     </Box>
                 </Toolbar>
             </AppBar>
@@ -257,6 +372,8 @@ export const ChatArea = ({
                 messageEdit={messageEdit}
                 onCancelReply={onCancelReply}
                 onCancelMessageEdit={onCancelMessageEdit}
+                onStartTyping={handleStartTyping}
+                onStopTyping={handleStopTyping}
             />
 
             {currentRoom && !isDM && (

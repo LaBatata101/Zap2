@@ -15,6 +15,8 @@ export const MessageInput = ({
     messageEdit,
     onCancelReply,
     onCancelMessageEdit,
+    onStartTyping,
+    onStopTyping,
 }: {
     isConnected: boolean;
     onSendMessage: (content: string, files: File[]) => Promise<void>;
@@ -23,6 +25,8 @@ export const MessageInput = ({
     messageEdit: types.Message | null;
     onCancelReply: () => void;
     onCancelMessageEdit: () => void;
+    onStartTyping: () => void;
+    onStopTyping: () => void;
 }) => {
     const [newMessage, setNewMessage] = useState("");
     const [files, setFiles] = useState<File[]>([]);
@@ -33,6 +37,7 @@ export const MessageInput = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textFieldRef = useRef<HTMLDivElement>(null);
     const isEditingMessage = messageEdit !== null;
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (messageEdit) {
@@ -50,6 +55,13 @@ export const MessageInput = ({
     const handleSendMessage = async () => {
         if ((!newMessage.trim() && files.length === 0) || loading) return;
         setLoading(true);
+
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+            onStopTyping();
+            typingTimeoutRef.current = null;
+        }
+
         try {
             if (messageEdit) {
                 await onEditMessageComplete(newMessage.trim());
@@ -63,6 +75,23 @@ export const MessageInput = ({
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleTypingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setNewMessage(e.target.value);
+
+        if (!typingTimeoutRef.current && e.target.value.length > 0) {
+            onStartTyping();
+        }
+
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+
+        typingTimeoutRef.current = setTimeout(() => {
+            onStopTyping();
+            typingTimeoutRef.current = null;
+        }, 1500);
     };
 
     const handleCancelMessageEdit = useCallback(() => {
@@ -293,7 +322,7 @@ export const MessageInput = ({
                     maxRows={4}
                     placeholder="Type a message..."
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={handleTypingChange}
                     onKeyDown={handleKeyPress}
                     disabled={!isConnected}
                     size="small"

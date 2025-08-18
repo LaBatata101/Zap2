@@ -39,6 +39,7 @@ enum ChatActionType {
     EditMessage,
     AddMessageReaction,
     DeleteMessageReaction,
+    SetTypingStatus,
     Error,
 }
 
@@ -60,6 +61,7 @@ type ChatState = {
     connectionStatus: ConnectionStatus;
     searchTerm: string;
     highlightedMessageId?: number;
+    typingUsers: { [roomId: number]: string[] };
 };
 
 type ChatAction =
@@ -104,6 +106,10 @@ type ChatAction =
     | {
           type: ChatActionType.DeleteMessageReaction;
           payload: { message: Message; reactionId: number };
+      }
+    | {
+          type: ChatActionType.SetTypingStatus;
+          payload: { roomId: number; user: string; isTyping: boolean };
       };
 
 const initialState: ChatState = {
@@ -117,6 +123,7 @@ const initialState: ChatState = {
     hasMoreMessages: true,
     nextMessagesUrl: null,
     messagesLoading: false,
+    typingUsers: {},
 };
 
 function chatReducer(state: ChatState, action: ChatAction) {
@@ -335,6 +342,27 @@ function chatReducer(state: ChatState, action: ChatAction) {
                 ...state,
                 messages: updatedMessages,
             };
+        case ChatActionType.SetTypingStatus: {
+            const { roomId, user, isTyping } = action.payload;
+            const currentTypingUsers = state.typingUsers[roomId] || [];
+            let newTypingUsers;
+
+            if (isTyping) {
+                newTypingUsers = currentTypingUsers.includes(user)
+                    ? currentTypingUsers
+                    : [...currentTypingUsers, user];
+            } else {
+                newTypingUsers = currentTypingUsers.filter((u) => u !== user);
+            }
+
+            return {
+                ...state,
+                typingUsers: {
+                    ...state.typingUsers,
+                    [roomId]: newTypingUsers,
+                },
+            };
+        }
         default:
             //@ts-ignore
             throw new Error(`Unhandled action type: ${action.type}`);
@@ -354,6 +382,7 @@ export const ChatApp = () => {
         hasMoreMessages,
         nextMessagesUrl,
         messagesLoading,
+        typingUsers,
     } = state;
 
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -413,6 +442,16 @@ export const ChatApp = () => {
                     dispatch({
                         type: ChatActionType.DeleteMessageReaction,
                         payload: { message: event.message, reactionId: event.reaction_id },
+                    });
+                    break;
+                case "typing_status":
+                    dispatch({
+                        type: ChatActionType.SetTypingStatus,
+                        payload: {
+                            roomId: event.room,
+                            user: event.user,
+                            isTyping: event.is_typing,
+                        },
                     });
                     break;
                 default:
@@ -735,6 +774,14 @@ export const ChatApp = () => {
         return await apiService.current.updateChatMemberAdminStatus(roomId, username, value);
     };
 
+    const handleStartTyping = (roomId: number) => {
+        wsService.current.startTyping(roomId);
+    };
+
+    const handleStopTyping = (roomId: number) => {
+        wsService.current.stopTyping(roomId);
+    };
+
     if (!user) {
         return (
             <AuthPage
@@ -804,6 +851,9 @@ export const ChatApp = () => {
                         onDeleteMessage={handleDeleteMessage}
                         onToggleAdmin={handleToggleAdmin}
                         onToggleReaction={handleToggleMessageReaction}
+                        onStartTyping={handleStartTyping}
+                        onStopTyping={handleStopTyping}
+                        typingUsers={typingUsers[currentRoom?.id || 0] || []}
                     />
                 </Box>
             </Box>

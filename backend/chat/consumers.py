@@ -44,6 +44,16 @@ class UserChatConsumer(AsyncWebsocketConsumer):
             return
 
         match msg_type:
+            case "start_typing":
+                await self.channel_layer.group_send(
+                    f"chat_{data["room"]}",
+                    {"type": "chat.typing", "user": self.user.username, "room": data["room"], "is_typing": True},
+                )
+            case "stop_typing":
+                await self.channel_layer.group_send(
+                    f"chat_{data["room"]}",
+                    {"type": "chat.typing", "user": self.user.username, "room": data["room"], "is_typing": False},
+                )
             case "send_message":
                 room = data["message"]["room"]
                 await self.channel_layer.group_send(
@@ -82,6 +92,19 @@ class UserChatConsumer(AsyncWebsocketConsumer):
                 )
             case t:
                 raise Exception(f"Message type not handled: {t}")
+
+    async def chat_typing(self, event):
+        if self.user.username != event["user"]:
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        "type": "typing_status",
+                        "user": event["user"],
+                        "room": event["room"],
+                        "is_typing": event["is_typing"],
+                    }
+                )
+            )
 
     async def chat_message(self, event):
         await self.send(text_data=event["message"])
