@@ -15,3 +15,14 @@ export const formatDate = (timestamp: string) => {
         return date.toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "2-digit" });
     }
 };
+
+export const formatDate2 = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+
+    if (date.toDateString() === today.toDateString()) {
+        return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } else {
+        return date.toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "2-digit" });
+    }
+};

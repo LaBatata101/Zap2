@@ -10,7 +10,7 @@ import {
     Typography,
     Box,
 } from "@mui/material";
-import { formatTime } from "../helpers/format";
+import { formatDate2 } from "../helpers/format";
 import { Bookmark } from "@mui/icons-material";
 
 type RoomListItemProps = {
@@ -109,7 +109,7 @@ export const RoomListItem = memo(
                                     color="text.secondary"
                                     sx={{ fontSize: "0.75rem" }}
                                 >
-                                    {room.last_message && formatTime(room.last_message.timestamp)}
+                                    {room.last_message && formatDate2(room.last_message.timestamp)}
                                 </Typography>
                             </Box>
                         }
