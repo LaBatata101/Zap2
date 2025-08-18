@@ -1,5 +1,7 @@
+const locale = new Intl.DateTimeFormat().resolvedOptions().locale;
+
 export const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return new Date(timestamp).toLocaleTimeString([locale], { hour: "2-digit", minute: "2-digit" });
 };
 
 export const formatDate = (timestamp: string) => {
@@ -12,7 +14,11 @@ export const formatDate = (timestamp: string) => {
     } else if (date.toDateString() === yesterday.toDateString()) {
         return "Yesterday";
     } else {
-        return date.toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "2-digit" });
+        return date.toLocaleDateString([locale], {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+        });
     }
 };
 
@@ -21,8 +27,12 @@ export const formatDate2 = (timestamp: string) => {
     const today = new Date();
 
     if (date.toDateString() === today.toDateString()) {
-        return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        return date.toLocaleTimeString([locale], { hour: "2-digit", minute: "2-digit" });
     } else {
-        return date.toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "2-digit" });
+        return date.toLocaleDateString([locale], {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+        });
     }
 };
