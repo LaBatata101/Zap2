@@ -78,7 +78,7 @@ const EnhancedAvatar = styled(Avatar)(({ theme }) => ({
 
 type SidebarProps = {
     user: User;
-    rooms: any[];
+    rooms: ChatRoom[];
     currentRoom: ChatRoom;
     onRoomSelect: (room: ChatRoom) => Promise<void>;
     onCreateRoom: (name: string) => Promise<void>;
@@ -306,15 +306,19 @@ export const Sidebar = ({
                     </Button>
                 </Stack>
                 <List disablePadding>
-                    {filteredRooms.map((room) => (
-                        <RoomListItem
-                            key={room.id}
-                            room={room}
-                            currentUser={user}
-                            isSelected={currentRoom?.id === room.id}
-                            onSelect={onRoomSelect}
-                        />
-                    ))}
+                    {filteredRooms
+                        .filter((room) => {
+                            return !(room.is_dm && room.last_message === null);
+                        })
+                        .map((room) => (
+                            <RoomListItem
+                                key={room.id}
+                                room={room}
+                                currentUser={user}
+                                isSelected={currentRoom?.id === room.id}
+                                onSelect={onRoomSelect}
+                            />
+                        ))}
                 </List>
             </Box>
         </>
