@@ -130,7 +130,9 @@ export const UploadIcon = styled(CloudUpload)(({ theme }) => ({
 }));
 
 export enum DialogMode {
+    // TODO: choose better name for this
     CurrentUser,
     View,
     DM,
+    Create,
 }

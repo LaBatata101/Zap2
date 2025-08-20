@@ -9,10 +9,6 @@ import {
     Typography,
     Stack,
     List,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Box,
     IconButton,
     InputAdornment,
@@ -23,6 +19,7 @@ import { StyledTooltip } from "./styled";
 import { RoomListItem } from "./room_list_item";
 import { UserProfileDialog } from "./dialog/user_profile_dialog";
 import { DialogMode } from "./dialog/common";
+import { RoomDetailsDialog } from "./dialog/chat_group_details_dialog";
 
 export const sidebarWidth = 320;
 
@@ -36,7 +33,6 @@ const StyledDrawer = styled(Drawer)({
     },
 });
 
-// Enhanced user profile section with hover effects
 const UserProfileSection = styled(Box)(({ theme }) => ({
     cursor: "pointer",
     borderRadius: theme.shape.borderRadius,
@@ -81,7 +77,7 @@ type SidebarProps = {
     rooms: ChatRoom[];
     currentRoom: ChatRoom;
     onRoomSelect: (room: ChatRoom) => Promise<void>;
-    onCreateRoom: (name: string) => Promise<void>;
+    onCreateRoom?: (name: string, description: string, is_private: boolean) => Promise<boolean>;
     onLogout: () => Promise<void>;
     searchTerm: string;
     setSearchTerm: (term: string) => void;
@@ -114,23 +110,7 @@ export const Sidebar = ({
     onStartDirectMessage,
 }: SidebarProps) => {
     const [showRoomModal, setShowRoomModal] = useState(false);
-    const [newRoomName, setNewRoomName] = useState("");
-    const [loading, setLoading] = useState(false);
     const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
-
-    const handleCreateRoom = async () => {
-        if (!newRoomName.trim()) return;
-        setLoading(true);
-        try {
-            await onCreateRoom(newRoomName.trim());
-            setNewRoomName("");
-            setShowRoomModal(false);
-        } catch (error) {
-            console.error("Failed to create room: ", error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const filteredRooms = rooms.filter((room) =>
         room.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -350,32 +330,13 @@ export const Sidebar = ({
                 onUpdateProfile={onUpdateProfile}
             />
 
-            <Dialog
-                open={showRoomModal}
+            <RoomDetailsDialog
+                isOpen={showRoomModal}
                 onClose={() => setShowRoomModal(false)}
-                fullWidth
-                maxWidth="xs"
-            >
-                <DialogTitle>Create New Group</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Group Name"
-                        type="text"
-                        fullWidth
-                        variant="standard"
-                        value={newRoomName}
-                        onChange={(e) => setNewRoomName(e.target.value)}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setShowRoomModal(false)}>Cancelar</Button>
-                    <Button onClick={handleCreateRoom} variant="contained" disabled={loading}>
-                        {loading ? "Creating..." : "Create"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                currentUser={user}
+                mode={DialogMode.Create}
+                onCreateRoom={onCreateRoom}
+            />
         </>
     );
 };

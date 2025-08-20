@@ -128,11 +128,56 @@ export class APIService {
         return response.data;
     }
 
-    async createRoom(name: string): Promise<ChatRoom> {
-        const response = await this.request("/rooms/", {
-            method: "POST",
-            body: JSON.stringify({ name }),
-        });
+    async updateRoom(
+        roomId: number,
+        updatedRoom: {
+            name: string;
+            description: string;
+            avatar_img: File | null;
+            crop_avatar_data: CropAvatarData | null;
+        },
+    ) {
+        const formData = new FormData();
+        formData.append("name", updatedRoom.name);
+        formData.append("description", updatedRoom.description);
+
+        if (updatedRoom.avatar_img) {
+            formData.append("avatar_img", updatedRoom.avatar_img, updatedRoom.avatar_img.name);
+            if (updatedRoom.crop_avatar_data) {
+                const cropData = updatedRoom.crop_avatar_data;
+                formData.append("crop_x", cropData.x.toString());
+                formData.append("crop_y", cropData.y.toString());
+                formData.append("crop_size", cropData.cropSize.toString());
+                formData.append("crop_scale", cropData.scale.toString());
+                formData.append("crop_container_width", cropData.containerWidth.toString());
+                formData.append("crop_container_height", cropData.containerHeight.toString());
+            }
+        }
+
+        return this.request(
+            `/rooms/${roomId}/`,
+            {
+                method: "PATCH",
+                body: formData,
+            },
+            true,
+        );
+    }
+
+    async createRoom(name: string, description: string, isPrivate: boolean): Promise<ChatRoom> {
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("description", description);
+        formData.append("is_private", `${isPrivate}`);
+
+        const response = await this.request(
+            "/rooms/",
+            {
+                method: "POST",
+                body: formData,
+            },
+            true,
+        );
         return response.data;
     }
 
@@ -213,42 +258,6 @@ export class APIService {
             method: "POST",
         });
         return response.data;
-    }
-
-    async updateRoom(
-        roomId: number,
-        updatedRoom: {
-            name: string;
-            description: string;
-            avatar_img: File | null;
-            crop_avatar_data: CropAvatarData | null;
-        },
-    ) {
-        const formData = new FormData();
-        formData.append("name", updatedRoom.name);
-        formData.append("description", updatedRoom.description);
-
-        if (updatedRoom.avatar_img) {
-            formData.append("avatar_img", updatedRoom.avatar_img, updatedRoom.avatar_img.name);
-            if (updatedRoom.crop_avatar_data) {
-                const cropData = updatedRoom.crop_avatar_data;
-                formData.append("crop_x", cropData.x.toString());
-                formData.append("crop_y", cropData.y.toString());
-                formData.append("crop_size", cropData.cropSize.toString());
-                formData.append("crop_scale", cropData.scale.toString());
-                formData.append("crop_container_width", cropData.containerWidth.toString());
-                formData.append("crop_container_height", cropData.containerHeight.toString());
-            }
-        }
-
-        return this.request(
-            `/rooms/${roomId}/`,
-            {
-                method: "PATCH",
-                body: formData,
-            },
-            true,
-        );
     }
 
     // User methods

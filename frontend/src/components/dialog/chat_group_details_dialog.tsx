@@ -43,21 +43,22 @@ import {
 } from "./common";
 
 type RoomDetailsDialogProps = {
-    currentUser: User;
-    room: ChatRoom;
+    currentUser?: User;
+    room?: ChatRoom;
     mode: DialogMode;
     isOpen: boolean;
     onClose: () => void;
-    onUpdateRoom: (
+    onUpdateRoom?: (
         roomId: number,
         name: string,
         description: string,
         avatar: File | null,
         cropAvatarData: CropAvatarData | null,
-    ) => Promise<boolean>;
-    onLoadMembers: (roomId: number) => Promise<User[]>;
-    onProfileView: (user: User) => void;
-    onToggleAdmin: (roomId: number, username: string, value: boolean) => Promise<User>;
+    ) => Promise<boolean>; // TODO: missing is_private
+    onCreateRoom?: (name: string, description: string, is_private: boolean) => Promise<boolean>;
+    onLoadMembers?: (roomId: number) => Promise<User[]>;
+    onProfileView?: (user: User) => void;
+    onToggleAdmin?: (roomId: number, username: string, value: boolean) => Promise<User>;
 };
 
 export const RoomDetailsDialog = ({
@@ -66,12 +67,13 @@ export const RoomDetailsDialog = ({
     isOpen,
     onClose,
     onUpdateRoom,
+    onCreateRoom,
     mode,
     onLoadMembers,
     onProfileView,
     onToggleAdmin,
 }: RoomDetailsDialogProps) => {
-    const [isEditing, setIsEditing] = useState(false);
+    const [isEditing, setIsEditing] = useState(mode === DialogMode.Create);
     const [name, setName] = useState("");
     const [isPrivate, setPrivate] = useState(false);
     const [description, setDescription] = useState("");
@@ -90,16 +92,17 @@ export const RoomDetailsDialog = ({
 
     useEffect(() => {
         if (isOpen) {
-            setName(room.name);
-            setPrivate(room.is_private);
-            setDescription(room.description || "");
-            setAvatarPreview(room.avatar_img || null);
-            setIsEditing(false);
+            setName(room?.name || "");
+            setPrivate(room?.is_private || false);
+            setDescription(room?.description || "");
+            setAvatarPreview(room?.avatar_img || null);
             setAvatarFile(null);
             setError(null);
             setSuccess(false);
-            setShowMembers(true);
-            loadMembers();
+            setShowMembers(mode !== DialogMode.Create);
+            if (mode !== DialogMode.Create) {
+                loadMembers();
+            }
         }
     }, [room, isOpen]);
 
@@ -114,7 +117,7 @@ export const RoomDetailsDialog = ({
     const loadMembers = async () => {
         setLoadingMembers(true);
         try {
-            const loadedMembers = await onLoadMembers(room.id);
+            const loadedMembers = await onLoadMembers!(room!.id);
             setMembers(loadedMembers);
         } catch (error) {
             console.error("Failed to load members:", error);
@@ -131,9 +134,14 @@ export const RoomDetailsDialog = ({
         setLoading(true);
         setError(null);
         try {
-            const result = await onUpdateRoom(room.id, name, description, avatarFile, cropData);
+            let result;
+            if (mode === DialogMode.Create) {
+                result = await onCreateRoom!(name, description, isPrivate);
+            } else {
+                result = await onUpdateRoom!(room!.id, name, description, avatarFile, cropData);
+                setIsEditing(false);
+            }
             setSuccess(result);
-            if (result) setIsEditing(false);
         } catch (e: any) {
             setError(e.message || "Failed to update room.");
         } finally {
@@ -142,10 +150,15 @@ export const RoomDetailsDialog = ({
     };
 
     const handleCancel = () => {
-        setIsEditing(false);
-        setName(room.name);
-        setDescription(room.description || "");
-        setAvatarPreview(room.avatar_img || null);
+        if (mode === DialogMode.Create) {
+            onClose();
+        } else {
+            setIsEditing(false);
+        }
+
+        setName(room?.name || "");
+        setDescription(room?.description || "");
+        setAvatarPreview(room?.avatar_img || null);
     };
 
     const handleAvatarChange = (file: File) => {
@@ -177,7 +190,7 @@ export const RoomDetailsDialog = ({
     };
 
     const handleToggleAdmin = async (username: string, value: boolean) => {
-        const user = await onToggleAdmin(room.id, username, value);
+        const user = await onToggleAdmin!(room!.id, username, value);
         if (user) {
             setMembers((prevMembers) =>
                 prevMembers.map((member) =>
@@ -188,10 +201,23 @@ export const RoomDetailsDialog = ({
     };
 
     const isAdmin = (user: User) => user.is_admin;
-    const isOwner = (user: User) => user.username === room.owner;
+    const isOwner = (user: User) => user.username === room!.owner;
 
     const canManageAdmins = (user: User) => {
         return isAdmin(user) || user.is_superuser || isOwner(user);
+    };
+
+    const getTitle = () => {
+        switch (mode) {
+            case DialogMode.Create:
+                return "Create New Group";
+            default:
+                if (isEditing) {
+                    return "Edit Group Info";
+                } else {
+                    return "Group Info";
+                }
+        }
     };
 
     return (
@@ -201,7 +227,7 @@ export const RoomDetailsDialog = ({
             >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Typography variant="h6" fontWeight={600}>
-                        {isEditing ? "Edit Group Info" : "Group Info"}
+                        {getTitle()}
                     </Typography>
                 </Box>
                 <IconButton onClick={onClose}>
@@ -219,7 +245,7 @@ export const RoomDetailsDialog = ({
                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 />
                             ) : (
-                                room.name.charAt(0).toUpperCase()
+                                room?.name.charAt(0).toUpperCase() || ""
                             )}
                         </StyledAvatar>
                         {isEditing && (
@@ -415,7 +441,7 @@ export const RoomDetailsDialog = ({
                     ) : (
                         <Box sx={{ textAlign: "center", width: "100%" }}>
                             <Typography variant="h5" fontWeight={600} gutterBottom>
-                                {room.name}
+                                {room?.name || ""}
                             </Typography>
                             <Typography
                                 color="text.secondary"
@@ -427,14 +453,14 @@ export const RoomDetailsDialog = ({
                                     textAlign: "justify",
                                 }}
                             >
-                                {room.description || "No description."}
+                                {room?.description || "No description."}
                             </Typography>
 
                             {/* Room Type Indicator */}
                             <Chip
-                                label={room.is_private ? "Private Group" : "Public Group"}
+                                label={room?.is_private ? "Private Group" : "Public Group"}
                                 size="small"
-                                color={room.is_private ? "secondary" : "primary"}
+                                color={room?.is_private ? "secondary" : "primary"}
                                 sx={{ mb: 2 }}
                             />
                         </Box>
@@ -447,7 +473,7 @@ export const RoomDetailsDialog = ({
                     )}
                     {success && (
                         <Alert severity="success" sx={{ width: "100%", borderRadius: 2 }}>
-                            Room updated successfully!
+                            Chat details updated successfully!
                         </Alert>
                     )}
 
@@ -520,7 +546,7 @@ export const RoomDetailsDialog = ({
                                                             width: "100%",
                                                             cursor: "pointer",
                                                         }}
-                                                        onClick={() => onProfileView(member)}
+                                                        onClick={() => onProfileView!(member)}
                                                     >
                                                         <ListItemAvatar>
                                                             <Avatar
@@ -603,7 +629,7 @@ export const RoomDetailsDialog = ({
                                                                     {canManageAdmins(member) &&
                                                                         !isOwner(member) &&
                                                                         member.id !==
-                                                                            currentUser.id && (
+                                                                            currentUser!.id && (
                                                                             <Box
                                                                                 sx={{
                                                                                     display: "flex",
@@ -676,34 +702,36 @@ export const RoomDetailsDialog = ({
                 sx={{
                     p: 3,
                     pt: 2,
-                    justifyContent: mode === DialogMode.CurrentUser ? "space-between" : "center",
+                    justifyContent:
+                        mode === DialogMode.CurrentUser || mode === DialogMode.Create
+                            ? "space-between"
+                            : "center",
                 }}
             >
-                {mode === DialogMode.CurrentUser &&
-                    (isEditing ? (
-                        <>
-                            <ActionButton
-                                startIcon={<Cancel />}
-                                onClick={handleCancel}
-                                disabled={loading}
-                                sx={{ color: "text.secondary" }}
-                            >
-                                Cancel
-                            </ActionButton>
-                            <ActionButton
-                                startIcon={<Save />}
-                                onClick={handleSave}
-                                variant="contained"
-                                disabled={loading}
-                            >
-                                {loading ? <CircularProgress size={16} /> : "Save"}
-                            </ActionButton>
-                        </>
-                    ) : (
-                        <ActionButton startIcon={<Edit />} onClick={() => setIsEditing(true)}>
-                            Edit Details
+                {isEditing ? (
+                    <>
+                        <ActionButton
+                            startIcon={<Cancel />}
+                            onClick={handleCancel}
+                            disabled={loading}
+                            sx={{ color: "text.secondary" }}
+                        >
+                            Cancel
                         </ActionButton>
-                    ))}
+                        <ActionButton
+                            startIcon={<Save />}
+                            onClick={handleSave}
+                            variant="contained"
+                            disabled={loading}
+                        >
+                            {loading ? <CircularProgress size={16} /> : "Save"}
+                        </ActionButton>
+                    </>
+                ) : (
+                    <ActionButton startIcon={<Edit />} onClick={() => setIsEditing(true)}>
+                        Edit Details
+                    </ActionButton>
+                )}
             </DialogActions>
 
             {selectedImageFile && showCropEditor && (

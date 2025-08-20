@@ -598,15 +598,17 @@ export const ChatApp = () => {
         [currentRoom],
     );
 
-    const handleCreateRoom = async (roomName: string) => {
+    const handleCreateRoom = async (roomName: string, description: string, isPrivate: boolean) => {
         try {
-            const newRoom = await apiService.current.createRoom(roomName);
+            const newRoom = await apiService.current.createRoom(roomName, description, isPrivate);
             const updatedRooms = [...rooms, newRoom];
             dispatch({ type: ChatActionType.SetRooms, payload: updatedRooms });
             handleRoomSelect(newRoom);
+
+            return true;
         } catch (error) {
             console.error("Failed to create room: ", error);
-            throw error;
+            return false;
         }
     };
 
