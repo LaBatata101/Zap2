@@ -13,19 +13,15 @@ class UserChatConsumer(AsyncWebsocketConsumer):
     @override
     async def connect(self):
         self.user = self.scope["user"]
+
         if not self.user.is_authenticated:
             await self.close()
             return
 
-        # TODO
-        # has_access = await self.check_room_access(self.user, self.room_id)
-        # if not has_access:
-        #     await self.close(code=403)
-        #     return
-
         await self.accept()
 
         chat_rooms = await self.get_user_chat_rooms(self.user)
+
         for room in chat_rooms:
             await self.channel_layer.group_add(f"chat_{room.id}", self.channel_name)
 
@@ -171,17 +167,4 @@ class UserChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_user_chat_rooms(self, user):
-        # return list(ChatRoom.objects.filter(members=user))
-        return list(ChatRoom.objects.all())  # FIX: only return the rooms which the user is member of
-
-    @database_sync_to_async
-    def check_room_access(self, user, room_id):
-        try:
-            room = ChatRoom.objects.get(id=room_id)
-            if room.is_private:
-                # If room is private, check if user is member of it
-                return user in room.members.all()
-            # If room is public, every user has access to it
-            return True
-        except ChatRoom.DoesNotExist:
-            return False
+        return list(ChatRoom.objects.filter(members=user))
