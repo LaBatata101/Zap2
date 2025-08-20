@@ -55,6 +55,7 @@ type ChatAreaProps = {
         emoji: string,
         reaction?: types.MessageReaction,
     ) => void;
+    onCreateInvitation: (roomId: number) => Promise<string | null>;
     onStartTyping: (roomId: number) => void;
     onStopTyping: (roomId: number) => void;
     typingUsers: string[];
@@ -88,6 +89,7 @@ export const ChatArea = ({
     onStartTyping,
     onStopTyping,
     typingUsers,
+    onCreateInvitation,
 }: ChatAreaProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -395,6 +397,7 @@ export const ChatArea = ({
                         setProfileDialogOpen(true);
                     }}
                     onToggleAdmin={onToggleAdmin}
+                    onCreateInvitation={onCreateInvitation}
                 />
             )}
             {/* This is used to display the user information in the chat area, when clicked in the toolbar, or

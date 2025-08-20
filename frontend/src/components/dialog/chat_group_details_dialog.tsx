@@ -19,6 +19,7 @@ import {
     Avatar,
     Collapse,
     Switch,
+    Snackbar,
 } from "@mui/material";
 import { CropAvatarData, ChatRoom, User } from "../../api/types";
 import {
@@ -30,6 +31,8 @@ import {
     People,
     ExpandMore,
     ExpandLess,
+    GroupAdd,
+    ContentCopy,
 } from "@mui/icons-material";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ImageCropEditor } from "../image_crop_editor";
@@ -56,6 +59,7 @@ type RoomDetailsDialogProps = {
         cropAvatarData: CropAvatarData | null,
         isPrivate: boolean,
     ) => Promise<boolean>;
+    onCreateInvitation?: (roomId: number) => Promise<string | null>;
     onCreateRoom?: (name: string, description: string, is_private: boolean) => Promise<boolean>;
     onLoadMembers?: (roomId: number) => Promise<User[]>;
     onProfileView?: (user: User) => void;
@@ -68,6 +72,7 @@ export const RoomDetailsDialog = ({
     isOpen,
     onClose,
     onUpdateRoom,
+    onCreateInvitation,
     onCreateRoom,
     mode,
     onLoadMembers,
@@ -89,6 +94,12 @@ export const RoomDetailsDialog = ({
     const [members, setMembers] = useState<User[]>([]);
     const [loadingMembers, setLoadingMembers] = useState(false);
     const [showMembers, setShowMembers] = useState(true);
+    const [invitationLink, setInvitationLink] = useState<string | null>(null);
+    const [snackbar, setSnackbar] = useState({
+        open: false,
+        message: "",
+        severity: "success" as "success" | "error",
+    });
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -101,6 +112,7 @@ export const RoomDetailsDialog = ({
             setError(null);
             setSuccess(false);
             setShowMembers(mode !== DialogMode.Create);
+            setInvitationLink(null);
             if (mode !== DialogMode.Create) {
                 loadMembers();
             }
@@ -114,6 +126,21 @@ export const RoomDetailsDialog = ({
             }, 1000);
         }
     }, [success]);
+
+    const handleCreateInvite = async () => {
+        if (!room) return;
+        const token = await onCreateInvitation!(room.id);
+        if (token) {
+            setInvitationLink(`${window.location.origin}/join/${token}`);
+        }
+    };
+
+    const handleCopyToClipboard = () => {
+        if (invitationLink) {
+            navigator.clipboard.writeText(invitationLink);
+            setSnackbar({ open: true, message: "Copied to clipboard!", severity: "success" });
+        }
+    };
 
     const loadMembers = async () => {
         setLoadingMembers(true);
@@ -245,7 +272,7 @@ export const RoomDetailsDialog = ({
             <DialogContent sx={{ pt: 3, pb: 2 }}>
                 <Stack spacing={3} alignItems="center">
                     <AvatarContainer>
-                        <StyledAvatar sx={{ width: 120, height: 120 }}>
+                        <StyledAvatar>
                             {avatarPreview ? (
                                 <img
                                     src={avatarPreview}
@@ -564,8 +591,8 @@ export const RoomDetailsDialog = ({
                                                                     border: isOwner(member)
                                                                         ? "2px solid"
                                                                         : isAdmin(member)
-                                                                          ? "2px solid"
-                                                                          : "none",
+                                                                            ? "2px solid"
+                                                                            : "none",
                                                                     borderColor: isOwner(member)
                                                                         ? "warning.main"
                                                                         : "info.main",
@@ -637,7 +664,7 @@ export const RoomDetailsDialog = ({
                                                                     {canManageAdmins(member) &&
                                                                         !isOwner(member) &&
                                                                         member.id !==
-                                                                            currentUser!.id && (
+                                                                        currentUser!.id && (
                                                                             <Box
                                                                                 sx={{
                                                                                     display: "flex",
@@ -677,14 +704,14 @@ export const RoomDetailsDialog = ({
                                                                                         color="info"
                                                                                         sx={{
                                                                                             "& .MuiSwitch-thumb":
-                                                                                                {
-                                                                                                    width: 16,
-                                                                                                    height: 16,
-                                                                                                },
+                                                                                            {
+                                                                                                width: 16,
+                                                                                                height: 16,
+                                                                                            },
                                                                                             "& .MuiSwitch-track":
-                                                                                                {
-                                                                                                    borderRadius: 10,
-                                                                                                },
+                                                                                            {
+                                                                                                borderRadius: 10,
+                                                                                            },
                                                                                         }}
                                                                                     />
                                                                                 </Tooltip>
@@ -736,9 +763,52 @@ export const RoomDetailsDialog = ({
                         </ActionButton>
                     </>
                 ) : (
-                    <ActionButton startIcon={<Edit />} onClick={() => setIsEditing(true)}>
-                        Edit Details
-                    </ActionButton>
+                    <>
+                        <ActionButton startIcon={<Edit />} onClick={() => setIsEditing(true)}>
+                            Edit Details
+                        </ActionButton>
+                        {!invitationLink && (
+                            <ActionButton
+                                startIcon={<GroupAdd />}
+                                onClick={handleCreateInvite}
+                                variant="outlined"
+                            >
+                                Create Invite Link
+                            </ActionButton>
+                        )}
+
+                        {invitationLink && (
+                            <TextField
+                                value={invitationLink}
+                                fullWidth
+                                size="small"
+                                slotProps={{
+                                    input: {
+                                        readOnly: true,
+                                        endAdornment: (
+                                            <IconButton onClick={handleCopyToClipboard}>
+                                                <ContentCopy />
+                                            </IconButton>
+                                        ),
+                                    },
+                                }}
+                            />
+                        )}
+                        <Snackbar
+                            open={snackbar.open}
+                            autoHideDuration={1500}
+                            onClose={() => setSnackbar({ ...snackbar, open: false })}
+                            anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                        >
+                            <Alert
+                                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                                severity={snackbar.severity}
+                                sx={{ width: "100%" }}
+                            >
+                                {snackbar.message}
+                            </Alert>
+                        </Snackbar>
+                    </>
                 )}
             </DialogActions>
 

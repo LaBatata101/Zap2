@@ -53,6 +53,8 @@ export type ChatRoom = {
     description: string;
     is_dm: boolean;
     dm_recipient: User | null;
+    member_count: number;
+    is_member: boolean;
 };
 
 export type LoginCredentials = {

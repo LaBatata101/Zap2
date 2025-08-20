@@ -16,6 +16,7 @@ import {
 } from "../api/types";
 import { Box, ThemeProvider, useMediaQuery, useTheme } from "@mui/material";
 import { darkTheme } from "../theme";
+import { JoinRoomDialog } from "../components/dialog/join_room_dialog";
 
 enum ChatActionType {
     RegistrationStart,
@@ -395,6 +396,8 @@ export const ChatApp = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
     const [isSidebarOpen, setSidebarOpen] = useState(false);
 
+    const [invitationToken, setInvitationToken] = useState<string | null>(null);
+
     const handleSidebarToggle = () => {
         setSidebarOpen(!isSidebarOpen);
     };
@@ -407,6 +410,16 @@ export const ChatApp = () => {
             setTimeout(() => {
                 dispatch({ type: ChatActionType.SetHighlightedMessage, payload: undefined });
             }, 650);
+        }
+    }, []);
+
+    useEffect(() => {
+        const path = window.location.pathname;
+        if (path.startsWith("/join/")) {
+            const token = path.split("/join/")[1];
+            if (token) {
+                setInvitationToken(token);
+            }
         }
     }, []);
 
@@ -789,6 +802,32 @@ export const ChatApp = () => {
         wsService.current.stopTyping(roomId);
     };
 
+    const handleCreateInvitation = async (roomId: number) => {
+        try {
+            const { token } = await apiService.current.createInvitation(roomId);
+            return token;
+        } catch (error) {
+            console.error("Failed to create invitation:", error);
+            return null;
+        }
+    };
+
+    const handleJoinSuccess = (joinedRoom: ChatRoom) => {
+        // TODO: create a websocket event for when a user joins a group chat
+        dispatch({ type: ChatActionType.AddRoom, payload: joinedRoom });
+
+        // Select the room to make it active
+        handleRoomSelect(joinedRoom);
+        setInvitationToken(null);
+
+        // Remove the token from the URL
+        window.history.pushState(
+            {},
+            document.title,
+            window.location.pathname.split("/join/")[0] || "/",
+        );
+    };
+
     if (!user) {
         return (
             <AuthPage
@@ -853,6 +892,7 @@ export const ChatApp = () => {
                         hasMoreMessages={hasMoreMessages}
                         messagesLoading={messagesLoading}
                         onUpdateRoom={handleUpdateRoom}
+                        onCreateInvitation={handleCreateInvitation}
                         onLoadMembers={loadGroupMembers}
                         onStartDirectMessage={handleStartDirectMessage}
                         onDeleteMessage={handleDeleteMessage}
@@ -864,6 +904,22 @@ export const ChatApp = () => {
                     />
                 </Box>
             </Box>
+            {invitationToken && user && (
+                <JoinRoomDialog
+                    token={invitationToken}
+                    apiService={apiService.current}
+                    onConfirm={handleJoinSuccess}
+                    onClose={() => {
+                        setInvitationToken(null);
+                        // Remove the token from the URL
+                        window.history.pushState(
+                            {},
+                            document.title,
+                            window.location.pathname.split("/join/")[0] || "/",
+                        );
+                    }}
+                />
+            )}
         </ThemeProvider>
     );
 };

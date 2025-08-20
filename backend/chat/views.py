@@ -13,12 +13,12 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import (ChatRoom, Membership, Message, MessageMedia,
-                     MessageReaction)
+from .models import (ChatRoom, ChatRoomInvitation, Membership, Message,
+                     MessageMedia, MessageReaction)
 from .permissions import IsOwnerOrReadOnly, UserPermissions
-from .serializers import (ChatRoomSerializer, MessageMediaSerializer,
-                          MessageReactionSerializer, MessageSerializer,
-                          UserSerializer)
+from .serializers import (ChatRoomInvitationSerializer, ChatRoomSerializer,
+                          MessageMediaSerializer, MessageReactionSerializer,
+                          MessageSerializer, UserSerializer)
 
 
 def get_csrf(request):
@@ -116,22 +116,28 @@ class ChatRoomViewSet(viewsets.ModelViewSet[ChatRoom]):
         room = serializer.save(owner=self.request.user)
         room.members.add(self.request.user)
 
-    @action(detail=True, methods=["POST"], permission_classes=[IsOwnerOrReadOnly])
+    @action(
+        detail=True,
+        methods=["POST"],
+        permission_classes=[permissions.IsAuthenticated],
+    )
     def invite(self, request, pk=None):
         room = self.get_object()
-        username = request.data.get("username")
-        if not username:
-            return Response({"detail": "User not provided"}, status=status.HTTP_400_BAD_REQUEST)
+        current_user = request.user
 
         try:
-            user_to_invite = User.objects.get(username=username)
-            if user_to_invite in room.members.all():
-                return Response({"message": f"User {username} is already member"}, status=status.HTTP_200_OK)
+            requester_membership = Membership.objects.get(user=current_user, room=room)
+        except Membership.DoesNotExist:
+            return Response({"detail": "You are not a member of this room."}, status=status.HTTP_403_FORBIDDEN)
 
-            room.members.add(user_to_invite)
-            return Response({"message": "User invited successfully"}, status=status.HTTP_200_OK)
-        except User.DoesNotExist:
-            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        if current_user != room.owner and not requester_membership.is_admin and not current_user.is_superuser:
+            return Response(
+                {"detail": "Only the group owner or admins can create invitations."}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        invitation = ChatRoomInvitation.objects.create(room=room, created_by=request.user)
+        serializer = ChatRoomInvitationSerializer(invitation)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["GET"], permission_classes=[permissions.IsAuthenticated], url_path="members")
     def list_members(self, request, pk=None):
@@ -205,6 +211,37 @@ class ChatRoomViewSet(viewsets.ModelViewSet[ChatRoom]):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class InvitationViewSet(viewsets.GenericViewSet):
+    queryset = ChatRoomInvitation.objects.all()
+    lookup_field = "token"
+
+    @action(detail=True, methods=["get"], permission_classes=[permissions.AllowAny])
+    def details(self, request, token=None):
+        invitation = self.get_object()
+        if invitation.is_expired():
+            return Response({"detail": "Invitation has expired."}, status=status.HTTP_410_GONE)
+
+        serializer = ChatRoomSerializer(invitation.room, context={"request": request})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    def join(self, request, token=None):
+        invitation = self.get_object()
+        if invitation.is_expired():
+            return Response({"detail": "Invitation has expired."}, status=status.HTTP_410_GONE)
+
+        room = invitation.room
+        user = request.user
+
+        if user in room.members.all():
+            serializer = ChatRoomSerializer(room, context={"request": request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        room.members.add(user)
+        serializer = ChatRoomSerializer(room, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class MessageViewSet(viewsets.ModelViewSet[Message]):

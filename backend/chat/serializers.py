@@ -5,8 +5,8 @@ from rest_framework import serializers
 
 from chat.utils.image import crop_avatar_img
 
-from .models import (ChatRoom, Membership, Message, MessageMedia,
-                     MessageReaction, Profile)
+from .models import (ChatRoom, ChatRoomInvitation, Membership, Message,
+                     MessageMedia, MessageReaction, Profile)
 
 
 class ProfileSerializer(serializers.ModelSerializer[Profile]):
@@ -179,11 +179,19 @@ class MembershipSerializer(serializers.ModelSerializer):
         fields = ("user", "room", "is_admin")
 
 
+class ChatRoomInvitationSerializer(serializers.ModelSerializer[ChatRoomInvitation]):
+    class Meta:
+        model = ChatRoomInvitation
+        fields = ("token",)
+
+
 class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
     owner = serializers.ReadOnlyField(source="owner.username")
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     dm_recipient = serializers.SerializerMethodField()
+    member_count = serializers.SerializerMethodField()
+    is_member = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRoom
@@ -198,6 +206,8 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
             "owner",
             "last_message",
             "unread_count",
+            "member_count",
+            "is_member",
         )
 
     def validate_avatar_img(self, value):
@@ -249,6 +259,15 @@ class ChatRoomSerializer(serializers.ModelSerializer[ChatRoom]):
         if recipient:
             return UserSerializer(recipient, context=self.context).data
         return None
+
+    def get_member_count(self, obj: ChatRoom) -> int:
+        return obj.members.count()
+
+    def get_is_member(self, obj: ChatRoom) -> bool:
+        user = self.context["request"].user
+        if not user.is_authenticated:
+            return False
+        return obj.members.filter(id=user.id).exists()
 
     @override
     def update(self, instance, validated_data):

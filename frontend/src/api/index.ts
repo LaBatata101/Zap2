@@ -183,6 +183,25 @@ export class APIService {
         return response.data;
     }
 
+    async createInvitation(roomId: number): Promise<{ token: string }> {
+        const response = await this.request(`/rooms/${roomId}/invite/`, {
+            method: "POST",
+        });
+        return response.data;
+    }
+
+    async getInvitationDetails(token: string): Promise<{ status: number; data?: ChatRoom }> {
+        const response = await this.request(`/invitations/${token}/details/`);
+        return response;
+    }
+
+    async joinRoom(token: string): Promise<{ status: number; data?: ChatRoom }> {
+        const response = await this.request(`/invitations/${token}/join/`, {
+            method: "POST",
+        });
+        return response;
+    }
+
     async getMessages(
         roomId: number,
         next: string | null = null,

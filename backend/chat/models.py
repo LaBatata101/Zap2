@@ -1,9 +1,16 @@
+import uuid
+from datetime import timedelta
 from typing import final, override
 
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+
+
+def get_invitation_expiry_date():
+    return timezone.now() + timedelta(days=7)
 
 
 @final
@@ -79,6 +86,23 @@ class MessageMedia(models.Model):
 
     def __str__(self):
         return f"Media for Message {self.message.id}: {self.file.name}"
+
+
+@final
+class ChatRoomInvitation(models.Model):
+    """Stores a unique token for inviting users to a chat room."""
+
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name="invitations")
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_invitations")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(default=get_invitation_expiry_date)
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    def __str__(self):
+        return f"Invitation for {self.room.name} by {self.created_by.username}"
 
 
 @receiver(post_save, sender=User)
