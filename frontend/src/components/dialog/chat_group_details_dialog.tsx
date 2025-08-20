@@ -54,7 +54,8 @@ type RoomDetailsDialogProps = {
         description: string,
         avatar: File | null,
         cropAvatarData: CropAvatarData | null,
-    ) => Promise<boolean>; // TODO: missing is_private
+        isPrivate: boolean,
+    ) => Promise<boolean>;
     onCreateRoom?: (name: string, description: string, is_private: boolean) => Promise<boolean>;
     onLoadMembers?: (roomId: number) => Promise<User[]>;
     onProfileView?: (user: User) => void;
@@ -138,7 +139,14 @@ export const RoomDetailsDialog = ({
             if (mode === DialogMode.Create) {
                 result = await onCreateRoom!(name, description, isPrivate);
             } else {
-                result = await onUpdateRoom!(room!.id, name, description, avatarFile, cropData);
+                result = await onUpdateRoom!(
+                    room!.id,
+                    name,
+                    description,
+                    avatarFile,
+                    cropData,
+                    isPrivate,
+                );
                 setIsEditing(false);
             }
             setSuccess(result);

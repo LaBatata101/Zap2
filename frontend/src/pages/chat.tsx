@@ -618,14 +618,19 @@ export const ChatApp = () => {
         description: string,
         avatar: File | null,
         cropAvatarData: CropAvatarData | null,
+        isPrivate: boolean,
     ) => {
         try {
-            const response = await apiService.current.updateRoom(roomId, {
-                name,
-                description,
-                avatar_img: avatar,
-                crop_avatar_data: cropAvatarData,
-            });
+            const response = await apiService.current.updateRoom(
+                roomId,
+                {
+                    name,
+                    description,
+                    avatar_img: avatar,
+                    crop_avatar_data: cropAvatarData,
+                },
+                isPrivate,
+            );
 
             if (response.status === 200) {
                 dispatch({ type: ChatActionType.UpdateRoom, payload: response.data });

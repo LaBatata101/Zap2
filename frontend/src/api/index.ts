@@ -136,10 +136,12 @@ export class APIService {
             avatar_img: File | null;
             crop_avatar_data: CropAvatarData | null;
         },
+        is_private: boolean,
     ) {
         const formData = new FormData();
         formData.append("name", updatedRoom.name);
         formData.append("description", updatedRoom.description);
+        formData.append("is_private", `${is_private}`);
 
         if (updatedRoom.avatar_img) {
             formData.append("avatar_img", updatedRoom.avatar_img, updatedRoom.avatar_img.name);

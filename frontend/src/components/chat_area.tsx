@@ -44,6 +44,7 @@ type ChatAreaProps = {
         description: string,
         avatar: File | null,
         cropAvatarData: types.CropAvatarData | null,
+        isPrivate: boolean,
     ) => Promise<boolean>;
     onLoadMembers: (roomId: number) => Promise<types.User[]>;
     onStartDirectMessage: (user: types.User) => void;
