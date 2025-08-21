@@ -10,8 +10,24 @@ import {
     Toolbar,
     useTheme,
     useMediaQuery,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
+    Button,
 } from "@mui/material";
-import { Message as MessageIcon, Menu as MenuIcon, Bookmark } from "@mui/icons-material";
+import {
+    Message as MessageIcon,
+    Menu as MenuIcon,
+    Bookmark,
+    MoreVert,
+    Logout,
+} from "@mui/icons-material";
 import { MessageList } from "./message_list";
 import { MessageInput } from "./message_input";
 import { useEffect, useState } from "react";
@@ -50,6 +66,7 @@ type ChatAreaProps = {
     onStartDirectMessage: (user: types.User) => void;
     onDeleteMessage: (message: types.Message) => void;
     onToggleAdmin: (roomId: number, username: string, value: boolean) => Promise<types.User>;
+    onLeaveRoom: (roomId: number, user: types.User) => void;
     onToggleReaction: (
         message: types.Message,
         emoji: string,
@@ -90,6 +107,7 @@ export const ChatArea = ({
     onStopTyping,
     typingUsers,
     onCreateInvitation,
+    onLeaveRoom,
 }: ChatAreaProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -101,6 +119,8 @@ export const ChatArea = ({
     const [isRoomDetailsOpen, setRoomDetailsOpen] = useState(false);
     const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
     const [recipient, setRecipient] = useState<types.User | null>(null);
+    const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+    const [isConfirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
     useEffect(() => {
         if (currentRoom?.dm_recipient) {
@@ -147,6 +167,12 @@ export const ChatArea = ({
         );
     }
 
+    const handleLeaveRoom = () => {
+        onLeaveRoom(currentRoom.id, user);
+        setMenuAnchor(null);
+        setConfirmDialogOpen(false);
+    };
+
     const getTypingText = () => {
         const otherTypingUsers = typingUsers;
 
@@ -167,6 +193,7 @@ export const ChatArea = ({
 
     const isDM = currentRoom.is_dm;
     const isDmItself = isDM && recipient?.id === user.id;
+    const isGroup = !isDM && !isDmItself;
 
     const isChatGroupOwner = currentRoom.owner === user.username;
     const displayName = isDM ? recipient?.username : currentRoom.name;
@@ -346,6 +373,23 @@ export const ChatArea = ({
                             </Box>
                         </Box>
                     </Box>
+                    {isGroup && (
+                        <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)}>
+                            <MoreVert />
+                        </IconButton>
+                    )}
+                    <Menu
+                        open={Boolean(menuAnchor)}
+                        anchorEl={menuAnchor}
+                        onClose={() => setMenuAnchor(null)}
+                    >
+                        <MenuItem onClick={() => setConfirmDialogOpen(true)}>
+                            <ListItemIcon sx={{ color: "error.main" }}>
+                                <Logout fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText sx={{ color: "error.main" }}>Leave group</ListItemText>
+                        </MenuItem>
+                    </Menu>
                 </Toolbar>
             </AppBar>
 
@@ -411,16 +455,31 @@ export const ChatArea = ({
                     onClose={() => setProfileDialogOpen(false)}
                     onStartDirectMessage={
                         isDM
-                            ? (_) => {}
+                            ? (_) => { }
                             : (user) => {
-                                  onStartDirectMessage(user);
-                                  setProfileDialogOpen(false);
-                                  setRoomDetailsOpen(false);
-                              }
+                                onStartDirectMessage(user);
+                                setProfileDialogOpen(false);
+                                setRoomDetailsOpen(false);
+                            }
                     }
                     onUpdateProfile={null}
                 />
             )}
+
+            <Dialog open={isConfirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
+                <DialogTitle>Leave Group</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to leave "{currentRoom.name}"?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleLeaveRoom} color="error">
+                        Leave
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Stack>
     );
 };

@@ -212,6 +212,49 @@ class ChatRoomViewSet(viewsets.ModelViewSet[ChatRoom]):
             status=status.HTTP_200_OK,
         )
 
+    @action(
+        detail=True,
+        methods=["POST"],
+        url_path="leave",
+        permission_classes=[permissions.IsAuthenticated],
+        parser_classes=[JSONParser],
+    )
+    def leave(self, request, pk=None):
+        room = self.get_object()
+        current_user = request.user
+
+        if room.is_dm:
+            return Response({"detail": "Operation only permitted in chat groups."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            membership = Membership.objects.get(user=current_user, room=room)
+        except Membership.DoesNotExist:
+            return Response({"detail": "You are not a member of this room."}, status=status.HTTP_403_FORBIDDEN)
+
+        new_owner = None
+        if room.owner == current_user:
+            other_members = Membership.objects.filter(room=room).exclude(user=current_user)
+            if other_members.exists():
+                # Promote the first admin found, or the oldest member
+                new_owner_membership = (
+                    other_members.filter(is_admin=True).first() or other_members.order_by("id").first()
+                )
+                new_owner = new_owner_membership.user
+                room.owner = new_owner_membership.user
+                room.save()
+            else:
+                # If the owner is the last person, delete the room
+                room.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+        membership.delete()
+
+        return (
+            Response({"new_onwer": new_owner}, status=status.HTTP_200_OK)
+            if new_owner
+            else Response(status=status.HTTP_204_NO_CONTENT)
+        )
+
 
 class InvitationViewSet(viewsets.GenericViewSet):
     queryset = ChatRoomInvitation.objects.all()

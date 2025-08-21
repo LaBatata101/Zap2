@@ -30,6 +30,8 @@ enum ChatActionType {
     AddRoom,
     SetRooms,
     UpdateRoom,
+    RemoveRoom,
+    UpdateRoomOnUserLeave,
     ResetUnreadCount,
     SetConnectionStatus,
     SetSearchTerm,
@@ -67,21 +69,21 @@ type ChatState = {
 
 type ChatAction =
     | {
-          type:
-              | ChatActionType.LoginStart
-              | ChatActionType.RegistrationStart
-              | ChatActionType.Logout
-              | ChatActionType.Error;
-      }
+        type:
+        | ChatActionType.LoginStart
+        | ChatActionType.RegistrationStart
+        | ChatActionType.Logout
+        | ChatActionType.Error;
+    }
     | {
-          type: ChatActionType.SetUser | ChatActionType.RegistrationSuccess;
-          payload: { user: User };
-      }
+        type: ChatActionType.SetUser | ChatActionType.RegistrationSuccess;
+        payload: { user: User };
+    }
     | { type: ChatActionType.SelectRoom; payload: ChatRoom }
     | {
-          type: ChatActionType.PrependMessages | ChatActionType.SetInitialMessages;
-          payload: { messages: Message[]; next: string | null; hasMore: boolean };
-      }
+        type: ChatActionType.PrependMessages | ChatActionType.SetInitialMessages;
+        payload: { messages: Message[]; next: string | null; hasMore: boolean };
+    }
     | { type: ChatActionType.AddRoom; payload: ChatRoom }
     | { type: ChatActionType.SetRooms; payload: ChatRoom[] }
     | { type: ChatActionType.SetConnectionStatus; payload: ConnectionStatus }
@@ -91,27 +93,32 @@ type ChatAction =
     | { type: ChatActionType.UpdateRoom; payload: ChatRoom }
     | { type: ChatActionType.ResetUnreadCount; payload: number }
     | {
-          type: ChatActionType.DeleteMessage;
-          payload: {
-              messageId: number;
-              roomId: number;
-              lastMessage?: { username: string; content: string; timestamp: string; room: number };
-          };
-      }
+        type: ChatActionType.DeleteMessage;
+        payload: {
+            messageId: number;
+            roomId: number;
+            lastMessage?: { username: string; content: string; timestamp: string; room: number };
+        };
+    }
     | { type: ChatActionType.SendMessage; payload: Message }
     | { type: ChatActionType.EditMessage; payload: Message }
     | {
-          type: ChatActionType.AddMessageReaction;
-          payload: MessageReaction;
-      }
+        type: ChatActionType.AddMessageReaction;
+        payload: MessageReaction;
+    }
     | {
-          type: ChatActionType.DeleteMessageReaction;
-          payload: { message: Message; reactionId: number };
-      }
+        type: ChatActionType.DeleteMessageReaction;
+        payload: { message: Message; reactionId: number };
+    }
     | {
-          type: ChatActionType.SetTypingStatus;
-          payload: { roomId: number; user: string; isTyping: boolean };
-      };
+        type: ChatActionType.SetTypingStatus;
+        payload: { roomId: number; user: string; isTyping: boolean };
+    }
+    | { type: ChatActionType.RemoveRoom; payload: { roomId: number } }
+    | {
+        type: ChatActionType.UpdateRoomOnUserLeave;
+        payload: { roomId: number; newOwner: User | null };
+    };
 
 const initialState: ChatState = {
     user: undefined,
@@ -174,13 +181,13 @@ function chatReducer(state: ChatState, action: ChatAction) {
                 updatedRooms = rooms.map((room) =>
                     room.id === updatedMessage.room
                         ? {
-                              ...room,
-                              last_message: {
-                                  username: updatedMessage.user.username,
-                                  message: updatedMessage.content,
-                                  timestamp: updatedMessage.timestamp,
-                              },
-                          }
+                            ...room,
+                            last_message: {
+                                username: updatedMessage.user.username,
+                                message: updatedMessage.content,
+                                timestamp: updatedMessage.timestamp,
+                            },
+                        }
                         : room,
                 );
             }
@@ -198,19 +205,19 @@ function chatReducer(state: ChatState, action: ChatAction) {
             const updatedRooms = rooms.map((room) =>
                 room.id === message.room
                     ? {
-                          ...room,
-                          last_message: {
-                              username: message.user.username,
-                              message: message.content,
-                              timestamp: message.timestamp,
-                          },
-                          // Only increment unread count if the room is not active
-                          // and the message is not from the current user
-                          unread_count:
-                              currentRoom?.id === message.room
-                                  ? room.unread_count
-                                  : room.unread_count + 1,
-                      }
+                        ...room,
+                        last_message: {
+                            username: message.user.username,
+                            message: message.content,
+                            timestamp: message.timestamp,
+                        },
+                        // Only increment unread count if the room is not active
+                        // and the message is not from the current user
+                        unread_count:
+                            currentRoom?.id === message.room
+                                ? room.unread_count
+                                : room.unread_count + 1,
+                    }
                     : room,
             );
 
@@ -271,16 +278,16 @@ function chatReducer(state: ChatState, action: ChatAction) {
             const updatedRooms = state.rooms.map((room) =>
                 room.id === action.payload.roomId
                     ? {
-                          ...room,
-                          last_message: lastMessage
-                              ? {
-                                    username: lastMessage.username,
-                                    message: lastMessage.content,
-                                    timestamp: lastMessage.timestamp,
-                                }
-                              : undefined,
-                          unread_count: lastMessage ? room.unread_count - 1 : room.unread_count,
-                      }
+                        ...room,
+                        last_message: lastMessage
+                            ? {
+                                username: lastMessage.username,
+                                message: lastMessage.content,
+                                timestamp: lastMessage.timestamp,
+                            }
+                            : undefined,
+                        unread_count: lastMessage ? room.unread_count - 1 : room.unread_count,
+                    }
                     : room,
             );
 
@@ -364,6 +371,39 @@ function chatReducer(state: ChatState, action: ChatAction) {
                 },
             };
         }
+        case ChatActionType.RemoveRoom:
+            return {
+                ...state,
+                rooms: state.rooms.filter((room) => room.id !== action.payload.roomId),
+                currentRoom:
+                    state.currentRoom?.id === action.payload.roomId ? undefined : state.currentRoom,
+            };
+        case ChatActionType.UpdateRoomOnUserLeave:
+            return {
+                ...state,
+                rooms: state.rooms.map((room) => {
+                    if (room.id === action.payload.roomId) {
+                        return {
+                            ...room,
+                            member_count: room.member_count - 1,
+                            owner: action.payload.newOwner
+                                ? action.payload.newOwner.username
+                                : room.owner,
+                        };
+                    }
+                    return room;
+                }),
+                currentRoom:
+                    state.currentRoom?.id === action.payload.roomId
+                        ? {
+                            ...state.currentRoom,
+                            member_count: state.currentRoom.member_count - 1,
+                            owner: action.payload.newOwner
+                                ? action.payload.newOwner.username
+                                : state.currentRoom.owner,
+                        }
+                        : state.currentRoom,
+            };
         default:
             //@ts-ignore
             throw new Error(`Unhandled action type: ${action.type}`);
@@ -465,6 +505,12 @@ export const ChatApp = () => {
                             user: event.user,
                             isTyping: event.is_typing,
                         },
+                    });
+                    break;
+                case "user_left":
+                    dispatch({
+                        type: ChatActionType.UpdateRoomOnUserLeave,
+                        payload: { roomId: event.room_id, newOwner: event.new_owner },
                     });
                     break;
                 default:
@@ -828,6 +874,21 @@ export const ChatApp = () => {
         );
     };
 
+    const handleLeaveRoom = async (roomId: number, user: User) => {
+        try {
+            const response = await apiService.current.leaveRoom(roomId);
+            if (response.status === 200) {
+                wsService.current.leaveGroup(roomId, user, response.data.new_owner);
+                dispatch({ type: ChatActionType.RemoveRoom, payload: { roomId } });
+            } else if (response.status === 204) {
+                wsService.current.leaveGroup(roomId, user);
+                dispatch({ type: ChatActionType.RemoveRoom, payload: { roomId } });
+            }
+        } catch (error) {
+            console.error("Failed to leave room:", error);
+        }
+    };
+
     if (!user) {
         return (
             <AuthPage
@@ -900,6 +961,7 @@ export const ChatApp = () => {
                         onToggleReaction={handleToggleMessageReaction}
                         onStartTyping={handleStartTyping}
                         onStopTyping={handleStopTyping}
+                        onLeaveRoom={handleLeaveRoom}
                         typingUsers={typingUsers[currentRoom?.id || 0] || []}
                     />
                 </Box>

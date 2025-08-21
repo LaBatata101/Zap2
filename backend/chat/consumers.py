@@ -4,7 +4,7 @@ from typing import override
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from chat.serializers import MessageSerializer
+from chat.serializers import MessageSerializer, UserSerializer
 
 from .models import ChatRoom, Message
 
@@ -86,8 +86,30 @@ class UserChatConsumer(AsyncWebsocketConsumer):
                         "reaction_id": data["reaction_id"],
                     },
                 )
+            case "user_left":
+                await self.channel_layer.group_send(
+                    f"chat_{data["room"]}",
+                    {
+                        "type": "chat.user.left",
+                        "room": data["room"],
+                        "user": data["user"],
+                        "new_owner": data["new_owner"],
+                    },
+                )
             case t:
                 raise Exception(f"Message type not handled: {t}")
+
+    async def chat_user_left(self, event):
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "user_left",
+                    "room": event["room"],
+                    "user": event["user"],
+                    "new_owner": event["new_owner"],
+                }
+            )
+        )
 
     async def chat_typing(self, event):
         if self.user.username != event["user"]:

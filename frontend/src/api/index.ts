@@ -202,6 +202,13 @@ export class APIService {
         return response;
     }
 
+    async leaveRoom(roomId: number) {
+        const response = await this.request(`/rooms/${roomId}/leave/`, {
+            method: "POST",
+        });
+        return response;
+    }
+
     async getMessages(
         roomId: number,
         next: string | null = null,
@@ -479,6 +486,14 @@ export class WebSocketService {
     stopTyping(roomId: number) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({ type: "stop_typing", room: roomId }));
+        }
+    }
+
+    leaveGroup(roomId: number, user: User, newOwner?: User) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(
+                JSON.stringify({ type: "user_left", room: roomId, user, new_owner: newOwner }),
+            );
         }
     }
 

@@ -86,24 +86,30 @@ export type CropAvatarData = {
 
 export type WebSocketEvent =
     | {
-          type: "send_message";
-          message: Message;
-      }
+        type: "send_message";
+        message: Message;
+    }
     | {
-          type: "edit_message";
-          message: Message;
-      }
+        type: "edit_message";
+        message: Message;
+    }
     | {
-          type: "delete_message";
-          message_id: number;
-          room: number;
-          last_message?: { username: string; content: string; timestamp: string; room: number };
-      }
+        type: "delete_message";
+        message_id: number;
+        room: number;
+        last_message?: { username: string; content: string; timestamp: string; room: number };
+    }
     | { type: "add_message_reaction"; reaction: MessageReaction }
     | { type: "delete_message_reaction"; message: Message; reaction_id: number }
     | {
-          type: "typing_status";
-          user: string;
-          room: number;
-          is_typing: boolean;
-      };
+        type: "typing_status";
+        user: string;
+        room: number;
+        is_typing: boolean;
+    }
+    | {
+        type: "user_left";
+        room_id: number;
+        user: User;
+        new_owner: User | null;
+    };
