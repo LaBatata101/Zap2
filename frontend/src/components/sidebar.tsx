@@ -112,9 +112,22 @@ export const Sidebar = ({
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [isProfileDialogOpen, setProfileDialogOpen] = useState(false);
 
-    const filteredRooms = rooms.filter((room) =>
-        room.name.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
+    const filteredRooms = rooms
+        .filter((room) => room.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter((room) => {
+            return !(room.is_dm && room.last_message === null);
+        });
+    const sortedRooms = filteredRooms.sort((room1, room2) => {
+        const timestampA = room1.last_message?.timestamp;
+        const timestampB = room2.last_message?.timestamp;
+
+        if (!timestampA && !timestampB) return 0;
+
+        if (!timestampA) return 1;
+        if (!timestampB) return -1;
+
+        return new Date(timestampB).getTime() - new Date(timestampA).getTime();
+    });
 
     const drawerContent = (
         <>
@@ -286,19 +299,15 @@ export const Sidebar = ({
                     </Button>
                 </Stack>
                 <List disablePadding>
-                    {filteredRooms
-                        .filter((room) => {
-                            return !(room.is_dm && room.last_message === null);
-                        })
-                        .map((room) => (
-                            <RoomListItem
-                                key={room.id}
-                                room={room}
-                                currentUser={user}
-                                isSelected={currentRoom?.id === room.id}
-                                onSelect={onRoomSelect}
-                            />
-                        ))}
+                    {sortedRooms.map((room) => (
+                        <RoomListItem
+                            key={room.id}
+                            room={room}
+                            currentUser={user}
+                            isSelected={currentRoom?.id === room.id}
+                            onSelect={onRoomSelect}
+                        />
+                    ))}
                 </List>
             </Box>
         </>
