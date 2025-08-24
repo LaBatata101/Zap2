@@ -250,7 +250,10 @@ class ChatRoomViewSet(viewsets.ModelViewSet[ChatRoom]):
         membership.delete()
 
         return (
-            Response({"new_onwer": new_owner}, status=status.HTTP_200_OK)
+            Response(
+                {"new_onwer": UserSerializer(new_owner, context=self.get_serializer_context()).data},
+                status=status.HTTP_200_OK,
+            )
             if new_owner
             else Response(status=status.HTTP_204_NO_CONTENT)
         )
